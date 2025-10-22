@@ -94,7 +94,7 @@ function RegistroForm() {
           <img
             src={logo}
             alt="Logo Sushi"
-            className="w-24 h-24 mx-auto mb-4 rounded-full"
+            className="mx-auto mb-4 max-h-24 object-contain"
           />
           <h2 className="text-2xl font-bold text-gray-800">Registro de Usuario</h2>
         </div>

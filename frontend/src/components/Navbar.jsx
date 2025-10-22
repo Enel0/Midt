@@ -14,7 +14,7 @@ function Navbar() {
         className="text-2xl font-bold cursor-pointer"
         onClick={() => navigate("/")}
       >
-        Fukusuke Sushi
+        Mi DT
       </h1>
 
       <div className="flex items-center space-x-4">
@@ -38,30 +38,16 @@ function Navbar() {
             {user.rol === "admin" && (
               <>
                 <button onClick={() => navigate("/asignarRoles")} className="hover:underline">Asignar Roles</button>
-                <button onClick={() => navigate("/reporte-ventas")} className="hover:underline">Reporte de Ventas</button>
-                <button onClick={() => navigate("/agregarProducto")} className="hover:underline">Agregar Producto</button>
-                <button onClick={() => navigate("/actualizar-producto")} className="hover:underline">Actualizar Producto</button>
-                <button onClick={() => navigate("/comandas")} className="hover:underline">Comandas</button>
-                <button onClick={() => navigate("/estado-pedido")} className="hover:underline">Mis Pedidos</button>
-                <button onClick={() => navigate("/AdminComentarios")} className="hover:underline">AdminComentarios</button>
-          
-
-
               </>
             )}
 
             {user.rol === "worker" && (
               <>
-                <button onClick={() => navigate("/agregarProducto")} className="hover:underline">Agregar Producto</button>
-                <button onClick={() => navigate("/actualizar-producto")} className="hover:underline">Actualizar Producto</button>
-                <button onClick={() => navigate("/comandas")} className="hover:underline">Comandas</button>
-                <button onClick={() => navigate("/estado-pedido")} className="hover:underline">Mis Pedidos</button>
+                
               </>
             )}
 
-            {user.rol === "client" && (
-              <button onClick={() => navigate("/estado-pedido")} className="hover:underline">Mis Pedidos</button>
-            )}
+            {/* client-specific sushi links removed */}
 
             <button
               onClick={() => {

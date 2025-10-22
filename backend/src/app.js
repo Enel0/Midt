@@ -2,13 +2,12 @@ import express from "express";
 import morgan from "morgan";
 import cors from "cors";
 import path from "path";
-import productosRoutes from "./routes/productos.js";
 import autRutas from "./routes/autRutas.js";
 import loginRutas from "./routes/loginRutas.js";
 import usuariosRoutes from "./routes/usuarios.js";
-import pedidosRoutes from "./routes/pedidos.js";
 import correoRoutes from "./correo.js";
-import comentariosRoutes from "./routes/comentariosRoutes.js";
+import organigramasRoutes from "./routes/organigramas.js";
+import denunciasRoutes from "./routes/denuncias.js";
 
 
 const app = express();
@@ -25,12 +24,11 @@ app.use(express.json());
 app.use("/imagenes", express.static(path.join(__dirname, "imagenes")));
 
 // Rutas
-app.use("/api/productos", productosRoutes);
 app.use("/api/auth", autRutas); // Para registro
 app.use("/api/auth/login", loginRutas);
 app.use("/api", usuariosRoutes); // Registrar las rutas de usuarios
-app.use("/api/pedidos", pedidosRoutes);
-app.use("/api", comentariosRoutes);
+app.use("/api/organigramas", organigramasRoutes);
+app.use("/api/denuncias", denunciasRoutes);
 
 
 //  Correo

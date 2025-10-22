@@ -1,4 +1,3 @@
-
 import React, { useContext, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +35,7 @@ function LoginForm() {
       const { token, user } = await response.json();
       localStorage.setItem("token", token);
       login(user);
-      navigate("/catalogo");
+      navigate("/organigrama");
     } catch (error) {
       setErrorMessage(error.message || "Error al iniciar sesión.");
     } finally {
@@ -120,7 +119,7 @@ function LoginForm() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded shadow-lg max-w-md w-full">
         <div className="text-center mb-6">
-          <img src={logo} alt="Logo Sushi" className="w-24 h-24 mx-auto mb-4 rounded-full" />
+          <img src={logo} alt="Logo Sushi" className="mx-auto mb-4 max-h-24 object-contain" />
         </div>
 
         {step === "login" && (

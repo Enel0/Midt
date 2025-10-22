@@ -3,18 +3,14 @@ import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext"; // Importa el contexto de usuario
 import Navbar from "./components/Navbar"; // Importa la Navbar
 import Home from "./estructura/Home";
-import Catalogo from "./estructura/Catalogo";
-import ReporteVentas from "./estructura/ReporteVentas";
-import AgregarProducto from "./estructura/AgregarProducto";
-import ActualizarProducto from "./estructura/ActualizarProducto";
-import EstadoPedido from "./estructura/EstadoPedido";
-import Pcarrito from "./estructura/Pcarrito";
-import Pago from "./estructura/Pago";
+import Organigrama from "./estructura/Organigrama";
+// Sushi pages removed
 import LoginForm from "./estructura/LoginForm";
 import RegistroForm from "./estructura/RegistroForm";
 import AsignarRoles from "./estructura/AsignarRoles";
-import Comandas from "./estructura/Comandas";
-import AdminComentarios from './estructura/AdminComentarios';
+import Denuncias from './estructura/Denuncias';
+import Denunciar from './estructura/Denunciar';
+import Perfil from './estructura/Perfil';
 
 function App() {
   return (
@@ -27,20 +23,18 @@ function App() {
           {/* Rutas de la aplicación */}
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/catalogo" element={<Catalogo />} />
-            <Route path="/pcarrito" element={<Pcarrito />} />
-            <Route path="/pago" element={<Pago />} />
+            <Route path="/organigrama" element={<Organigrama />} />
+            {/* removed carrito/pago */}
             <Route path="/login" element={<LoginForm />} />
             <Route path="/registro" element={<RegistroForm />} />
-            <Route path="/estado-pedido" element={<EstadoPedido />} />
+            {/* removed estado-pedido */}
 
             {/* Rutas antes protegidas, ahora abiertas */}
             <Route path="/asignarRoles" element={<AsignarRoles />} />
-            <Route path="/reporte-ventas" element={<ReporteVentas />} />
-            <Route path="/agregarProducto" element={<AgregarProducto />} />
-            <Route path="/actualizar-producto" element={<ActualizarProducto />} />
-            <Route path="/comandas" element={<Comandas />} />
-            <Route path="/AdminComentarios" element={<AdminComentarios />} />
+            {/* removed ventas/productos/comandas/comments */}
+            <Route path="/denuncias" element={<Denuncias />} />
+            <Route path="/denunciar" element={<Denunciar />} />
+            <Route path="/perfil" element={<Perfil />} />
 
 
             {/* Ruta de página no encontrada */}
