@@ -90,7 +90,6 @@ function AsignarRoles() {
           >
             <option value="todos">Todos los roles</option>
             <option value="client">Cliente</option>
-            <option value="worker">Trabajador</option>
             <option value="admin">Administrador</option>
           </select>
         </div>
@@ -117,7 +116,6 @@ function AsignarRoles() {
                     className="border border-gray-300 p-1 rounded w-36"
                   >
                     <option value="client">Cliente</option>
-                    <option value="worker">Trabajador</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </td>

@@ -13,7 +13,7 @@ const usuarioSchema = new mongoose.Schema({
   sexo: { type: String, required: true },
   telefono: { type: String, required: true },
   password: { type: String, required: true },
-  rol: { type: String, enum: ["admin", "worker", "client"], default: "client" },
+  rol: { type: String, enum: ["admin", "client"], default: "client" },
 });
 
 usuarioSchema.pre("save", async function (next) {

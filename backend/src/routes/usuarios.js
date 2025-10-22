@@ -19,7 +19,7 @@ router.put("/actualizar-rol/:id", async (req, res) => {
   const { id } = req.params;
   const { rol } = req.body;
 
-  if (!["client", "worker", "admin"].includes(rol)) {
+  if (!["client", "admin"].includes(rol)) {
     return res.status(400).json({ message: "Rol inválido" });
   }
 

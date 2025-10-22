@@ -41,11 +41,7 @@ function Navbar() {
               </>
             )}
 
-            {user.rol === "worker" && (
-              <>
-                
-              </>
-            )}
+            
 
             {/* client-specific sushi links removed */}
 
