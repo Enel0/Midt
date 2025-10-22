@@ -11,12 +11,29 @@ function RegistroForm() {
     handleSubmit,
     watch,
     formState: { errors },
+    setValue,
   } = useForm();
 
   const password = watch("password");
   const email = watch("email");
   const selectedRegion = watch("region");
   const comunas = useMemo(() => comunasByRegion(selectedRegion), [selectedRegion]);
+
+  const formatRutBody = (body) => body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const handleRutChange = (e) => {
+    let only = (e.target.value || '').toUpperCase().replace(/[^\dkK]/g, '');
+    if (only.length === 0) { setValue('rut', ''); return; }
+    // separar cuerpo y DV
+    let body = only.length > 1 ? only.slice(0, -1) : only;
+    let dv = only.length > 1 ? only.slice(-1) : '';
+    body = body.replace(/\D/g, '').slice(0, 8); // máx 8 dígitos en cuerpo
+    if (!/[0-9K]/.test(dv)) dv = '';
+    let formatted = formatRutBody(body);
+    if (dv) formatted = `${formatted}-${dv}`;
+    // limitar largo total (ej: 12.345.678-5 => 12 chars)
+    formatted = formatted.slice(0, 12);
+    setValue('rut', formatted, { shouldValidate: true, shouldDirty: true });
+  };
 
   const [codigoGenerado, setCodigoGenerado] = useState("");
   const [codigoEnviado, setCodigoEnviado] = useState(false);
@@ -139,7 +156,11 @@ function RegistroForm() {
                   dv: (v) => validarRutDV(v) || "Dígito verificador inválido",
                 }
               })}
-              onBlur={(e) => { e.target.value = formatearRut(e.target.value); }}
+              onChange={handleRutChange}
+              onBlur={(e) => { setValue('rut', formatearRut(e.target.value)); }}
+              inputMode="numeric"
+              maxLength={12}
+              placeholder="12.345.678-5"
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.rut && <p className="text-red-500 text-sm mt-1">{errors.rut.message}</p>}
