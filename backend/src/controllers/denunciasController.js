@@ -33,14 +33,50 @@ export const crearDenuncia = async (req, res) => {
 
 export const listarDenuncias = async (req, res) => {
   try {
-    const { empresaRut } = req.query;
+    const { empresaRut, estado, q, startDate, endDate, page = 1, limit = 20, sort = '-createdAt' } = req.query;
     const filtro = {};
     if (empresaRut) filtro.empresaRut = empresaRut;
-    const denuncias = await Denuncia.find(filtro).sort({ createdAt: -1 });
-    res.json(denuncias);
+    if (estado) filtro.estado = estado;
+    if (startDate || endDate) {
+      filtro.createdAt = {};
+      if (startDate) filtro.createdAt.$gte = new Date(startDate);
+      if (endDate) filtro.createdAt.$lte = new Date(endDate);
+    }
+    if (q) {
+      const rx = new RegExp(q, 'i');
+      filtro.$or = [
+        { trabajadorRut: rx },
+        { nombreTrabajador: rx },
+        { cargo: rx },
+        { motivo: rx },
+        { detalle: rx },
+      ];
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [items, total] = await Promise.all([
+      Denuncia.find(filtro).sort(sort).skip(skip).limit(limitNum),
+      Denuncia.countDocuments(filtro),
+    ]);
+    res.json({ items, total, page: pageNum, limit: limitNum });
   } catch (e) {
     console.error("listarDenuncias error:", e);
     res.status(500).json({ message: "Error en el servidor" });
+  }
+};
+
+export const obtenerDenuncia = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await Denuncia.findById(id);
+    if (!doc) return res.status(404).json({ message: 'Denuncia no encontrada' });
+    res.json(doc);
+  } catch (e) {
+    console.error('obtenerDenuncia error:', e);
+    res.status(500).json({ message: 'Error en el servidor' });
   }
 };
 
@@ -58,4 +94,3 @@ export const actualizarEstadoDenuncia = async (req, res) => {
     res.status(500).json({ message: "Error en el servidor" });
   }
 };
-
