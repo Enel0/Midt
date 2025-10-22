@@ -89,7 +89,7 @@ function AsignarRoles() {
             className="p-2 rounded w-full sm:w-1/3 border border-gray-300"
           >
             <option value="todos">Todos los roles</option>
-            <option value="client">Cliente</option>
+            <option value="usuario">Usuario</option>
             <option value="admin">Administrador</option>
           </select>
         </div>
@@ -115,7 +115,7 @@ function AsignarRoles() {
                     onChange={(e) => actualizarRol(usuario._id, e.target.value)}
                     className="border border-gray-300 p-1 rounded w-36"
                   >
-                    <option value="client">Cliente</option>
+                    <option value="usuario">Usuario</option>
                     <option value="admin">Administrador</option>
                   </select>
                 </td>

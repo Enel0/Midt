@@ -53,7 +53,7 @@ export const registro = async (req, res) => {
       sexo,
       telefono,
       password,
-      rol: "client", // Rol por defecto al registrarse
+      rol: "usuario", // Rol por defecto al registrarse
     });
 
     // Guardar en la base de datos

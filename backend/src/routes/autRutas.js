@@ -17,7 +17,7 @@ router.post("/registro", async (req, res) => {
     sexo,
     telefono,
     password,
-    rol = "client",
+    rol = "usuario",
   } = req.body;
 
   try {
