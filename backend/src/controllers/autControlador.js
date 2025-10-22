@@ -1,4 +1,5 @@
 import Usuario from "../models/Usuario.js";
+import { regiones as regionesArr, comunasByRegion, validarRutFormato, validarRutDV } from "../utils/cl-data.js";
 import { generarToken } from "../utils/jwtUtils.js";
 
 export const registro = async (req, res) => {
@@ -17,6 +18,16 @@ export const registro = async (req, res) => {
   } = req.body;
 
   try {
+    // Validaciones Chile: RUT, región, comuna
+    if (!validarRutFormato(rut) || !validarRutDV(rut)) {
+      return res.status(400).json({ message: "RUT inválido. Formato esperado 12.345.678-5 y DV correcto." });
+    }
+    if (!regionesArr().includes(region)) {
+      return res.status(400).json({ message: "Región inválida." });
+    }
+    if (!comunasByRegion(region).includes(comuna)) {
+      return res.status(400).json({ message: "Comuna inválida para la región seleccionada." });
+    }
     // Verificar si el RUT ya está registrado
     const usuarioExistente = await Usuario.findOne({ rut });
     if (usuarioExistente) {

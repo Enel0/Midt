@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import logo from "../imagenes/logoSushi.jpg";
+import { regiones, comunasByRegion, validarRutFormato, validarRutDV, formatearRut } from "../utils/cl-regiones-comunas";
 
 function RegistroForm() {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ function RegistroForm() {
 
   const password = watch("password");
   const email = watch("email");
+  const selectedRegion = watch("region");
+  const comunas = useMemo(() => comunasByRegion(selectedRegion), [selectedRegion]);
 
   const [codigoGenerado, setCodigoGenerado] = useState("");
   const [codigoEnviado, setCodigoEnviado] = useState(false);
@@ -131,11 +134,12 @@ function RegistroForm() {
               type="text"
               {...register("rut", {
                 required: "El RUT es obligatorio",
-                pattern: {
-                  value: /^\d{7,8}(-)?[0-9kK]{1}$/,
-                  message: "El RUT debe ser válido y terminar con un dígito o 'K'",
-                },
+                validate: {
+                  formato: (v) => validarRutFormato(v) || "Formato esperado: 12.345.678-5",
+                  dv: (v) => validarRutDV(v) || "Dígito verificador inválido",
+                }
               })}
+              onBlur={(e) => { e.target.value = formatearRut(e.target.value); }}
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {errors.rut && <p className="text-red-500 text-sm mt-1">{errors.rut.message}</p>}
@@ -183,22 +187,33 @@ function RegistroForm() {
           {/* Región */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Región</label>
-            <input
-              type="text"
+            <select
               {...register("region", { required: "La región es obligatoria" })}
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+              defaultValue=""
+            >
+              <option value="">Seleccionar...</option>
+              {regiones.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
             {errors.region && <p className="text-red-500 text-sm mt-1">{errors.region.message}</p>}
           </div>
 
           {/* Comuna */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Comuna</label>
-            <input
-              type="text"
+            <select
               {...register("comuna", { required: "La comuna es obligatoria" })}
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+              defaultValue=""
+              disabled={!selectedRegion}
+            >
+              <option value="">{selectedRegion ? "Seleccionar..." : "Selecciona una región primero"}</option>
+              {comunas.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
             {errors.comuna && <p className="text-red-500 text-sm mt-1">{errors.comuna.message}</p>}
           </div>
 
