@@ -1,5 +1,6 @@
 import express from "express";
-import { crearDenuncia, listarDenuncias, actualizarEstadoDenuncia, obtenerDenuncia } from "../controllers/denunciasController.js";
+import { crearDenuncia, listarDenuncias, actualizarEstadoDenuncia, obtenerDenuncia, listarMisDenuncias } from "../controllers/denunciasController.js";
+import { protegerRuta } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -11,6 +12,9 @@ router.get("/", listarDenuncias);
 
 // Obtener una denuncia
 router.get("/:id", obtenerDenuncia);
+
+// Mis denuncias (requiere auth)
+router.get("/mias/list", protegerRuta, listarMisDenuncias);
 
 // Cambiar estado
 router.patch("/:id/estado", actualizarEstadoDenuncia);

@@ -402,7 +402,7 @@ const Organigrama = () => {
         </div>
         <div className="p-4 flex flex-col gap-2">
           <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/perfil'); }}>Ver perfil</button>
-          <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/denuncias'); }}>Mis denuncias</button>
+          <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/mis-denuncias'); }}>Mis denuncias</button>
         </div>
       </div>
     </div>

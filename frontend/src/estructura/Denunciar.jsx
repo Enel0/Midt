@@ -31,9 +31,12 @@ const Denunciar = () => {
       setSending(true);
       const body = { empresaRut, motivo, detalle };
       if (nodoId) Object.assign(body, { nodoId, trabajadorRut, nombreTrabajador, cargo });
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('http://localhost:5000/api/denuncias', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body)
       });
       if (!res.ok) throw new Error('No se pudo enviar la denuncia');
@@ -89,4 +92,3 @@ const Denunciar = () => {
 };
 
 export default Denunciar;
-

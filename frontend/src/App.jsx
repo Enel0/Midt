@@ -11,6 +11,7 @@ import AsignarRoles from "./estructura/AsignarRoles";
 import Denuncias from './estructura/Denuncias';
 import Denunciar from './estructura/Denunciar';
 import Perfil from './estructura/Perfil';
+import MisDenuncias from './estructura/MisDenuncias';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             {/* removed ventas/productos/comandas/comments */}
             <Route path="/denuncias" element={<Denuncias />} />
             <Route path="/denunciar" element={<Denunciar />} />
+            <Route path="/mis-denuncias" element={<MisDenuncias />} />
             <Route path="/perfil" element={<Perfil />} />
 
 

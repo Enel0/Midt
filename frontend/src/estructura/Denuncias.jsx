@@ -40,7 +40,7 @@ const Denuncias = () => {
 
   useEffect(() => { fetchItems(); }, [empresaRut, q, estado, startDate, endDate, page, limit]);
 
-  const setEstado = async (id, estado) => {
+  const actualizarEstadoDenuncia = async (id, estado) => {
     try {
       const res = await fetch(`http://localhost:5000/api/denuncias/${id}/estado`, {
         method: 'PATCH',
@@ -144,7 +144,7 @@ const Denuncias = () => {
                   <td className="px-3 py-2 border-b">{d.cargo || '-'}</td>
                   <td className="px-3 py-2 border-b">{d.motivo}</td>
                   <td className="px-3 py-2 border-b">
-                    <select value={d.estado} onChange={(e)=>setEstado(d._id, e.target.value)} className="text-sm border rounded p-1">
+                    <select value={d.estado} onChange={(e)=>actualizarEstadoDenuncia(d._id, e.target.value)} className="text-sm border rounded p-1">
                       <option value="pendiente">pendiente</option>
                       <option value="en_revision">en revisión</option>
                       <option value="resuelta">resuelta</option>

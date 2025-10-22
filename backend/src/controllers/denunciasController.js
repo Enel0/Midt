@@ -80,6 +80,27 @@ export const obtenerDenuncia = async (req, res) => {
   }
 };
 
+export const listarMisDenuncias = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'No autenticado' });
+    const { estado, page = 1, limit = 20 } = req.query;
+    const filtro = { createdBy: userId };
+    if (estado) filtro.estado = estado;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+    const [items, total] = await Promise.all([
+      Denuncia.find(filtro).sort('-createdAt').skip(skip).limit(limitNum),
+      Denuncia.countDocuments(filtro),
+    ]);
+    res.json({ items, total, page: pageNum, limit: limitNum });
+  } catch (e) {
+    console.error('listarMisDenuncias error:', e);
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
 export const actualizarEstadoDenuncia = async (req, res) => {
   try {
     const { id } = req.params;
