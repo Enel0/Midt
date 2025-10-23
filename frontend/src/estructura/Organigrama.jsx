@@ -81,42 +81,28 @@ const Organigrama = () => {
       try {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const [resMis, resFav] = await Promise.all([
-          fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers }),
-          fetch('http://localhost:5000/api/me/empresas-favoritas', { headers }),
-        ]);
+        const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
         if (!resMis.ok) throw new Error('No se pudieron cargar tus empresas');
         const dataMis = await resMis.json();
-        const dataFav = resFav.ok ? await resFav.json() : { empresas: [] };
         const listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
-        const listaFav = Array.isArray(dataFav.empresas) ? dataFav.empresas : [];
-        // Unir por RUT normalizado
-        const seen = new Set();
-        const union = [];
-        [...listaMis, ...listaFav].forEach((er) => {
-          const key = normalizeRut(er);
-          if (!seen.has(key)) { seen.add(key); union.push(er); }
-        });
-        setEmpresas(union);
-        localStorage.setItem('empresasRut', JSON.stringify(union));
+        setEmpresas(listaMis);
+        localStorage.setItem('empresasRut', JSON.stringify(listaMis));
         // Preservar selección por RUT normalizado
         const saved = localStorage.getItem('empresaRut') || empresaRut;
-        const match = union.find(er => normalizeRut(er) === normalizeRut(saved));
+        const match = listaMis.find(er => normalizeRut(er) === normalizeRut(saved));
         if (match) {
           setEmpresaRut(match);
           localStorage.setItem('empresaRut', match);
         } else {
-          // si no hay selección válida y hay 1 opción, seleccionar automáticamente
-          if (union.length > 0) {
-            setEmpresaRut(union[0]);
-            localStorage.setItem('empresaRut', union[0]);
+          if (listaMis.length > 0) {
+            setEmpresaRut(listaMis[0]);
+            localStorage.setItem('empresaRut', listaMis[0]);
           } else {
             setEmpresaRut('');
             localStorage.removeItem('empresaRut');
           }
         }
       } catch (e) {
-        // Si falla, no mostrar empresas (forzar vacío)
         setEmpresas([]);
         setEmpresaRut('');
       }
@@ -169,23 +155,7 @@ const Organigrama = () => {
       return;
     }
     if (user && user.rol !== 'admin') {
-      try {
-        const token = localStorage.getItem('token');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        const res = await fetch('http://localhost:5000/api/me/empresas-favoritas', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ empresaRut: val })
-        });
-        if (!res.ok) throw new Error('No se pudo guardar como favorita');
-        const data = await res.json();
-        const union = Array.isArray(data.empresas) ? data.empresas : [];
-        setEmpresas(union);
-        localStorage.setItem('empresasRut', JSON.stringify(union));
-      } catch (e) {
-        alert(e.message);
-      }
+      alert('Solo puedes ver empresas donde tu RUT aparece en el organigrama. Pide a un administrador que te agregue.');
     } else {
       if (!empresas.includes(val)) {
         const updated = [...empresas, val];
@@ -266,6 +236,17 @@ const Organigrama = () => {
       if (!res.ok) throw new Error('No se pudo crear el nodo');
       setNewRut('');
       setNewCargo('');
+      // Si el RUT recién añadido coincide con el del usuario, asegurar que la empresa se cargue automáticamente en la lista
+      if (user?.rut && normalizeRut(user.rut) === normalizeRut(body.trabajadorRut)) {
+        const exists = empresas.some(er => normalizeRut(er) === normalizeRut(empresaRut));
+        if (!exists) {
+          const updated = [...empresas, empresaRut];
+          setEmpresas(updated);
+          localStorage.setItem('empresasRut', JSON.stringify(updated));
+        }
+        setEmpresaRut(empresaRut);
+        localStorage.setItem('empresaRut', empresaRut);
+      }
       await refreshTree();
     } catch (e) {
       alert(e.message || 'Error creando nodo');
@@ -312,30 +293,36 @@ const Organigrama = () => {
       {!empresaRut && empresas.length === 0 && (
         <div className="w-full bg-yellow-100 border-b border-yellow-300 text-yellow-900 p-4 flex items-center gap-3">
           <span>No tienes empresa seleccionada.</span>
-          <input
-            type="text"
-            value={newEmpresa}
-            onChange={(e) => {
-              const raw = e.target.value.toUpperCase();
-              const clean = raw.replace(/[^\dK]/g, '');
-              let body = clean.slice(0, Math.max(0, clean.length - 1));
-              const dv = clean.slice(-1);
-              body = body.slice(0, 8);
-              let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-              if (dv) formatted = `${formatted}-${dv}`;
-              setNewEmpresa(formatted);
-            }}
-            placeholder="RUT de la empresa"
-            className="p-2 border rounded"
-            maxLength={12}
-            onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
-          />
-          <button
-            onClick={handleAddEmpresa}
-            className="bg-[#FF540C] hover:bg-[#FF6A00] text-white font-semibold py-2 px-4 rounded"
-          >
-            Añadir empresa
-          </button>
+          {user?.rol === 'admin' ? (
+            <>
+              <input
+                type="text"
+                value={newEmpresa}
+                onChange={(e) => {
+                  const raw = e.target.value.toUpperCase();
+                  const clean = raw.replace(/[^\dK]/g, '');
+                  let body = clean.slice(0, Math.max(0, clean.length - 1));
+                  const dv = clean.slice(-1);
+                  body = body.slice(0, 8);
+                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                  if (dv) formatted = `${formatted}-${dv}`;
+                  setNewEmpresa(formatted);
+                }}
+                placeholder="RUT de la empresa"
+                className="p-2 border rounded"
+                maxLength={12}
+                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
+              />
+              <button
+                onClick={handleAddEmpresa}
+                className="bg-[#FF540C] hover:bg-[#FF6A00] text-white font-semibold py-2 px-4 rounded"
+              >
+                Añadir empresa
+              </button>
+            </>
+          ) : (
+            <span className="text-sm">Pide a un administrador que te agregue al organigrama de tu empresa.</span>
+          )}
         </div>
       )}
 
