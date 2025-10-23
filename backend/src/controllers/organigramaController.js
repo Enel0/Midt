@@ -14,6 +14,9 @@ export const crearNodo = async (req, res) => {
     if (!validarRutFormato(empresaRut) || !validarRutDV(empresaRut)) {
       return res.status(400).json({ message: "RUT de empresa inválido (use 12.345.678-5)" });
     }
+    if (!validarRutFormato(trabajadorRut) || !validarRutDV(trabajadorRut)) {
+      return res.status(400).json({ message: "RUT de trabajador inválido (use 12.345.678-5)" });
+    }
 
     let parentId = null;
     if (parent) {
@@ -73,6 +76,11 @@ export const actualizarNodo = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(updates, 'empresaRut')) {
       if (!validarRutFormato(updates.empresaRut) || !validarRutDV(updates.empresaRut)) {
         return res.status(400).json({ message: "RUT de empresa inválido (use 12.345.678-5)" });
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'trabajadorRut')) {
+      if (!validarRutFormato(updates.trabajadorRut) || !validarRutDV(updates.trabajadorRut)) {
+        return res.status(400).json({ message: "RUT de trabajador inválido (use 12.345.678-5)" });
       }
     }
 

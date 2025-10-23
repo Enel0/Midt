@@ -207,6 +207,10 @@ const Organigrama = () => {
   };
   const handleAddWorker = async () => {
     if (!empresaRut || !newRut || !newCargo) return;
+    if (!validarRutFormato(newRut) || !validarRutDV(newRut)) {
+      alert('RUT de trabajador inválido. Formato esperado 12.345.678-5');
+      return;
+    }
     try {
       const body = { empresaRut, trabajadorRut: newRut, cargo: newCargo };
       if (selectedNode?.id) body.parent = selectedNode.id;
@@ -351,9 +355,20 @@ const Organigrama = () => {
               <input
                 type="text"
                 value={newRut}
-                onChange={(e) => setNewRut(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value.toUpperCase();
+                  const clean = raw.replace(/[^\dK]/g, '');
+                  let body = clean.slice(0, Math.max(0, clean.length - 1));
+                  const dv = clean.slice(-1);
+                  body = body.slice(0, 8);
+                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                  if (dv) formatted = `${formatted}-${dv}`;
+                  setNewRut(formatted);
+                }}
                 placeholder="RUT trabajador"
                 className="p-1 border rounded text-sm"
+                maxLength={12}
+                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewRut(f); e.target.value=f; }}
               />
               <input
                 type="text"

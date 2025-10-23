@@ -16,7 +16,16 @@ const OrganigramaNodoSchema = new Schema(
         },
       ],
     },
-    trabajadorRut: { type: String, required: true },
+    trabajadorRut: {
+      type: String,
+      required: true,
+      validate: [
+        {
+          validator: (v) => validarRutFormato(v) && validarRutDV(v),
+          message: "RUT de trabajador inválido (formato o dígito verificador)",
+        },
+      ],
+    },
     nombreTrabajador: { type: String, default: null },
     cargo: { type: String, required: true },
     // Orden relativo para hermanos (para renderizar en un orden predecible)
