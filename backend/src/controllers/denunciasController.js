@@ -3,10 +3,52 @@ import OrganigramaNodo from "../models/OrganigramaNodo.js";
 
 export const crearDenuncia = async (req, res) => {
   try {
-    const { empresaRut, nodoId, trabajadorRut, nombreTrabajador, cargo, motivo, detalle } = req.body;
+    const {
+      empresaRut,
+      nodoId,
+      trabajadorRut,
+      nombreTrabajador,
+      cargo,
+      motivo,
+      detalle,
+      tipos,
+      tipoOtro,
+      fechaOPeriodo,
+      lugarHechos,
+      evidenciaDescripcion,
+      testigoNombre,
+      testigoCargoRelacion,
+      testigoContacto,
+      declaraVeracidad,
+      autorizaDatosPersonales,
+    } = req.body;
     if (!motivo) return res.status(400).json({ message: "motivo es obligatorio" });
 
-    let payload = { empresaRut: empresaRut || null, nodoId: nodoId || null, trabajadorRut: trabajadorRut || null, nombreTrabajador: nombreTrabajador || null, cargo: cargo || null, motivo, detalle: detalle || "" };
+    let tiposArr = [];
+    if (Array.isArray(tipos)) tiposArr = tipos;
+    else if (typeof tipos === 'string' && tipos.trim()) {
+      try { tiposArr = JSON.parse(tipos); } catch { tiposArr = []; }
+    }
+
+    let payload = {
+      empresaRut: empresaRut || null,
+      nodoId: nodoId || null,
+      trabajadorRut: trabajadorRut || null,
+      nombreTrabajador: nombreTrabajador || null,
+      cargo: cargo || null,
+      motivo,
+      detalle: detalle || "",
+      tipos: tiposArr,
+      tipoOtro: tipoOtro || "",
+      fechaOPeriodo: fechaOPeriodo || "",
+      lugarHechos: lugarHechos || "",
+      evidenciaDescripcion: evidenciaDescripcion || "",
+      testigoNombre: testigoNombre || "",
+      testigoCargoRelacion: testigoCargoRelacion || "",
+      testigoContacto: testigoContacto || "",
+      declaraVeracidad: String(declaraVeracidad) === 'true' || declaraVeracidad === true,
+      autorizaDatosPersonales: String(autorizaDatosPersonales) === 'true' || autorizaDatosPersonales === true,
+    };
 
     if (nodoId && (!payload.trabajadorRut || !payload.nombreTrabajador || !payload.cargo || !payload.empresaRut)) {
       const nodo = await OrganigramaNodo.findById(nodoId);
@@ -19,6 +61,17 @@ export const crearDenuncia = async (req, res) => {
     }
 
     if (!payload.empresaRut) return res.status(400).json({ message: "empresaRut es obligatorio" });
+
+    // Adjuntar evidencias si existen (multer rellena req.files)
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      payload.evidencias = req.files.map(f => ({
+        filename: f.filename,
+        originalname: f.originalname,
+        mimetype: f.mimetype,
+        size: f.size,
+        path: f.path,
+      }));
+    }
 
     // Si hay auth y user adjunto en req, asócialo
     if (req.user?.id) payload.createdBy = req.user.id;

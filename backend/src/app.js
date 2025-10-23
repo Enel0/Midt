@@ -23,6 +23,7 @@ app.use(express.json());
 
 // Servir archivos estáticos
 app.use("/imagenes", express.static(path.join(__dirname, "imagenes")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Rutas
 app.use("/api/auth", autRutas); // Para registro
@@ -49,3 +50,4 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
+

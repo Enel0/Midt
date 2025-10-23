@@ -82,6 +82,14 @@ const Organigrama = () => {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
+        if (resMis.status === 401) {
+          alert('Tu sesión expiró o es inválida. Inicia sesión nuevamente.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('empresaRut');
+          localStorage.removeItem('empresasRut');
+          window.location.href = '/login';
+          return;
+        }
         if (!resMis.ok) throw new Error('No se pudieron cargar tus empresas');
         const dataMis = await resMis.json();
         const listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
@@ -358,6 +366,14 @@ const Organigrama = () => {
                     const resp = await fetch('http://localhost:5000/api/organigramas/solicitudes', {
                       method: 'POST', headers, body: JSON.stringify({ empresaRut: newEmpresa, cargoPropuesto: newCargo })
                     });
+                    if (resp.status === 401) {
+                      alert('Tu sesión expiró o es inválida. Inicia sesión nuevamente.');
+                      localStorage.removeItem('token');
+                      localStorage.removeItem('empresaRut');
+                      localStorage.removeItem('empresasRut');
+                      window.location.href = '/login';
+                      return;
+                    }
                     const data = await resp.json();
                     if (!resp.ok) throw new Error(data.message || 'No se pudo crear la solicitud');
                     if (data.autoAprobada) {

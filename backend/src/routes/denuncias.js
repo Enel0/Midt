@@ -1,11 +1,12 @@
 import express from "express";
 import { crearDenuncia, listarDenuncias, actualizarEstadoDenuncia, obtenerDenuncia, listarMisDenuncias } from "../controllers/denunciasController.js";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
+import uploadEvidencias from "../middlewares/uploadEvidencias.js";
 
 const router = express.Router();
 
-// Crear una denuncia
-router.post("/", crearDenuncia);
+// Crear una denuncia (soporta archivos adjuntos)
+router.post("/", uploadEvidencias.array('evidencias', 10), crearDenuncia);
 
 // Listar denuncias (opcional ?empresaRut=...)
 router.get("/", listarDenuncias);
