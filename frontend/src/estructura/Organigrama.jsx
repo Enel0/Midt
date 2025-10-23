@@ -2,6 +2,7 @@ import React, { useEffect, useContext, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tree from 'react-d3-tree';
 import { UserContext } from '../context/UserContext';
+import { validarRutFormato, validarRutDV, formatearRut } from '../utils/cl-regiones-comunas';
 
 const palette = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 const getColorByDepth = (depth) => palette[depth % palette.length];
@@ -137,8 +138,12 @@ const Organigrama = () => {
   );
 
   const handleAddEmpresa = () => {
-    const val = (newEmpresa || '').trim();
+    let val = (newEmpresa || '').trim();
     if (!val) return;
+    if (!validarRutFormato(val) || !validarRutDV(val)) {
+      alert('RUT de empresa inválido. Formato esperado 12.345.678-5');
+      return;
+    }
     if (!empresas.includes(val)) {
       const updated = [...empresas, val];
       setEmpresas(updated);
@@ -302,9 +307,21 @@ const Organigrama = () => {
                 <input
                   type="text"
                   value={newEmpresa}
-                  onChange={(e) => setNewEmpresa(e.target.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.toUpperCase();
+                    // formateo básico: solo números y K, agregar guión final
+                    const clean = raw.replace(/[^\dK]/g, '');
+                    let body = clean.slice(0, Math.max(0, clean.length - 1));
+                    const dv = clean.slice(-1);
+                    body = body.slice(0, 8);
+                    let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    if (dv) formatted = `${formatted}-${dv}`;
+                    setNewEmpresa(formatted);
+                  }}
                   placeholder="Agregar nuevo RUT"
                   className="p-1 border rounded"
+                  onBlur={(e)=>{ e.target.value = formatearRut(e.target.value); setNewEmpresa(e.target.value); }}
+                  maxLength={12}
                 />
                 <button
                   onClick={handleAddEmpresa}

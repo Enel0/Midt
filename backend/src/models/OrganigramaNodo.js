@@ -1,10 +1,21 @@
 import mongoose from "mongoose";
+import { validarRutFormato, validarRutDV } from "../utils/cl-data.js";
 
 const { Schema } = mongoose;
 
 const OrganigramaNodoSchema = new Schema(
   {
-    empresaRut: { type: String, required: true, index: true },
+    empresaRut: { 
+      type: String, 
+      required: true, 
+      index: true,
+      validate: [
+        {
+          validator: (v) => validarRutFormato(v) && validarRutDV(v),
+          message: "RUT de empresa inválido (formato o dígito verificador)",
+        },
+      ],
+    },
     trabajadorRut: { type: String, required: true },
     nombreTrabajador: { type: String, default: null },
     cargo: { type: String, required: true },

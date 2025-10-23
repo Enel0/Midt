@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import OrganigramaNodo from "../models/OrganigramaNodo.js";
 import Usuario from "../models/Usuario.js";
-import Usuario from "../models/Usuario.js";
+import { validarRutFormato, validarRutDV } from "../utils/cl-data.js";
 
 export const crearNodo = async (req, res) => {
   try {
@@ -9,6 +9,10 @@ export const crearNodo = async (req, res) => {
 
     if (!empresaRut || !trabajadorRut || !cargo) {
       return res.status(400).json({ message: "empresaRut, trabajadorRut y cargo son obligatorios" });
+    }
+
+    if (!validarRutFormato(empresaRut) || !validarRutDV(empresaRut)) {
+      return res.status(400).json({ message: "RUT de empresa inválido (use 12.345.678-5)" });
     }
 
     let parentId = null;
@@ -65,6 +69,12 @@ export const actualizarNodo = async (req, res) => {
       }
     }
     if (updates.parent === null) updates.parent = null;
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'empresaRut')) {
+      if (!validarRutFormato(updates.empresaRut) || !validarRutDV(updates.empresaRut)) {
+        return res.status(400).json({ message: "RUT de empresa inválido (use 12.345.678-5)" });
+      }
+    }
 
     // si cambia el RUT, refrescar nombreTrabajador desde Usuario
     if (Object.prototype.hasOwnProperty.call(updates, 'trabajadorRut')) {
