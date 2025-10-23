@@ -1,3 +1,5 @@
+// Esquema Mongoose para Denuncia
+// Incluye campos adicionales: tipos, fecha/lugar de hechos, evidencias y consentimientos
 import mongoose from "mongoose";
 
 const { Schema } = mongoose;

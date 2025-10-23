@@ -1,3 +1,5 @@
+// Prueba de integración del componente Denunciar
+// Verifica que se construye un FormData válido y se envía al backend
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Denunciar from '../estructura/Denunciar.jsx';

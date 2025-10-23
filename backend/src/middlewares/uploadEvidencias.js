@@ -1,3 +1,5 @@
+// Middleware de subida de evidencias para denuncias.
+// Guarda archivos en /uploads/denuncias y valida tipo/tamaño.
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -41,4 +43,3 @@ const uploadEvidencias = multer({
 });
 
 export default uploadEvidencias;
-

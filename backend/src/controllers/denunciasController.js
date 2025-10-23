@@ -1,6 +1,8 @@
+// Controlador de denuncias: creación, listado, detalle y cambio de estado
 import Denuncia from "../models/Denuncia.js";
 import OrganigramaNodo from "../models/OrganigramaNodo.js";
 
+// Crea una denuncia. Acepta multipart/form-data con posibles archivos "evidencias".
 export const crearDenuncia = async (req, res) => {
   try {
     const {
@@ -22,14 +24,17 @@ export const crearDenuncia = async (req, res) => {
       declaraVeracidad,
       autorizaDatosPersonales,
     } = req.body;
+    // Validación: motivo es obligatorio (usado para clasificar la denuncia)
     if (!motivo) return res.status(400).json({ message: "motivo es obligatorio" });
 
+    // Normalizar "tipos": puede venir como array o como string JSON
     let tiposArr = [];
     if (Array.isArray(tipos)) tiposArr = tipos;
     else if (typeof tipos === 'string' && tipos.trim()) {
       try { tiposArr = JSON.parse(tipos); } catch { tiposArr = []; }
     }
 
+    // Armar payload base; se complementa con datos del nodo si corresponde
     let payload = {
       empresaRut: empresaRut || null,
       nodoId: nodoId || null,
@@ -50,6 +55,7 @@ export const crearDenuncia = async (req, res) => {
       autorizaDatosPersonales: String(autorizaDatosPersonales) === 'true' || autorizaDatosPersonales === true,
     };
 
+    // Enriquecer desde el nodo del organigrama si falta info del trabajador
     if (nodoId && (!payload.trabajadorRut || !payload.nombreTrabajador || !payload.cargo || !payload.empresaRut)) {
       const nodo = await OrganigramaNodo.findById(nodoId);
       if (nodo) {

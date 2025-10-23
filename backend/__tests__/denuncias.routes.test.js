@@ -1,3 +1,5 @@
+// Pruebas de integración de la API de denuncias
+// Usa supertest contra la app Express y Mongo en memoria
 import request from 'supertest';
 import app from '../src/app.js';
 
@@ -30,4 +32,3 @@ describe('Denuncias API', () => {
     expect(res.body).toHaveProperty('message');
   });
 });
-

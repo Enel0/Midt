@@ -1,7 +1,12 @@
+// Formulario de Denuncia
+// - Permite seleccionar tipo(s) de denuncia, describir hechos,
+//   adjuntar evidencias y declarar consentimientos.
+// - Envía los datos como FormData (multipart) al backend.
 import React, { useContext, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 
+// Hook auxiliar para leer parámetros de consulta (?empresaRut=...)
 function useQuery() {
   const { search } = useLocation();
   return useMemo(() => Object.fromEntries(new URLSearchParams(search)), [search]);
@@ -18,6 +23,7 @@ const Denunciar = () => {
   const nombreTrabajador = q.nombreTrabajador || '';
   const cargo = q.cargo || '';
 
+  // Opciones predefinidas de tipos de denuncia
   const tiposOpciones = [
     'Acoso laboral',
     'Acoso sexual',
@@ -41,23 +47,28 @@ const Denunciar = () => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
+  // Envío del formulario: valida campos, arma FormData y lo envía
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    // Unificar tipos seleccionados y el campo "Otras"
     const tiposSeleccionados = [...tipos];
     if (tipoOtro.trim()) tiposSeleccionados.push(`Otras: ${tipoOtro.trim()}`);
     const motivo = tiposSeleccionados.join(', ');
 
+    // Validaciones mínimas en frontend
     if (!empresaRut) { setError('La empresa es obligatoria'); return; }
     if (tiposSeleccionados.length === 0) { setError('Selecciona al menos un tipo de denuncia o completa "Otras"'); return; }
     if (!detalle.trim()) { setError('La descripción detallada es obligatoria'); return; }
     if (!declaraVeracidad || !autorizaDatosPersonales) { setError('Debes aceptar las declaraciones de consentimiento'); return; }
     try {
       setSending(true);
+      // Construir FormData para soportar archivos adjuntos
       const form = new FormData();
       form.append('empresaRut', empresaRut);
       form.append('motivo', motivo);
       form.append('detalle', detalle);
+      // Si la denuncia viene desde un nodo del organigrama, incluir datos del trabajador
       if (nodoId) {
         form.append('nodoId', nodoId);
         form.append('trabajadorRut', trabajadorRut);
@@ -74,9 +85,11 @@ const Denunciar = () => {
       form.append('testigoContacto', testigoContacto);
       form.append('declaraVeracidad', declaraVeracidad ? 'true' : 'false');
       form.append('autorizaDatosPersonales', autorizaDatosPersonales ? 'true' : 'false');
+      // Adjuntar múltiples evidencias (si las hay)
       for (const f of evidencias) form.append('evidencias', f);
       const token = localStorage.getItem('token');
       const headers = {};
+      // Adjuntar token si existe (autenticación)
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('http://localhost:5000/api/denuncias', {
         method: 'POST',
@@ -206,4 +219,3 @@ const Denunciar = () => {
 };
 
 export default Denunciar;
-
