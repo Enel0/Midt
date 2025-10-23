@@ -46,6 +46,7 @@ const Organigrama = () => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const normalizeRut = (r) => (r || '').toUpperCase().replace(/[.\-]/g, '');
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
@@ -80,16 +81,39 @@ const Organigrama = () => {
       try {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
-        if (!res.ok) throw new Error('No se pudieron cargar tus empresas');
-        const data = await res.json();
-        const lista = Array.isArray(data.empresas) ? data.empresas : [];
-        setEmpresas(lista);
-        localStorage.setItem('empresasRut', JSON.stringify(lista));
-        // Si la seleccionada no está en la lista, limpiar selección
-        if (!lista.includes(empresaRut)) {
-          setEmpresaRut('');
-          localStorage.removeItem('empresaRut');
+        const [resMis, resFav] = await Promise.all([
+          fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers }),
+          fetch('http://localhost:5000/api/me/empresas-favoritas', { headers }),
+        ]);
+        if (!resMis.ok) throw new Error('No se pudieron cargar tus empresas');
+        const dataMis = await resMis.json();
+        const dataFav = resFav.ok ? await resFav.json() : { empresas: [] };
+        const listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
+        const listaFav = Array.isArray(dataFav.empresas) ? dataFav.empresas : [];
+        // Unir por RUT normalizado
+        const seen = new Set();
+        const union = [];
+        [...listaMis, ...listaFav].forEach((er) => {
+          const key = normalizeRut(er);
+          if (!seen.has(key)) { seen.add(key); union.push(er); }
+        });
+        setEmpresas(union);
+        localStorage.setItem('empresasRut', JSON.stringify(union));
+        // Preservar selección por RUT normalizado
+        const saved = localStorage.getItem('empresaRut') || empresaRut;
+        const match = union.find(er => normalizeRut(er) === normalizeRut(saved));
+        if (match) {
+          setEmpresaRut(match);
+          localStorage.setItem('empresaRut', match);
+        } else {
+          // si no hay selección válida y hay 1 opción, seleccionar automáticamente
+          if (union.length > 0) {
+            setEmpresaRut(union[0]);
+            localStorage.setItem('empresaRut', union[0]);
+          } else {
+            setEmpresaRut('');
+            localStorage.removeItem('empresaRut');
+          }
         }
       } catch (e) {
         // Si falla, no mostrar empresas (forzar vacío)
@@ -137,17 +161,37 @@ const Organigrama = () => {
     [darkMode]
   );
 
-  const handleAddEmpresa = () => {
+  const handleAddEmpresa = async () => {
     let val = (newEmpresa || '').trim();
     if (!val) return;
     if (!validarRutFormato(val) || !validarRutDV(val)) {
       alert('RUT de empresa inválido. Formato esperado 12.345.678-5');
       return;
     }
-    if (!empresas.includes(val)) {
-      const updated = [...empresas, val];
-      setEmpresas(updated);
-      localStorage.setItem('empresasRut', JSON.stringify(updated));
+    if (user && user.rol !== 'admin') {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch('http://localhost:5000/api/me/empresas-favoritas', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ empresaRut: val })
+        });
+        if (!res.ok) throw new Error('No se pudo guardar como favorita');
+        const data = await res.json();
+        const union = Array.isArray(data.empresas) ? data.empresas : [];
+        setEmpresas(union);
+        localStorage.setItem('empresasRut', JSON.stringify(union));
+      } catch (e) {
+        alert(e.message);
+      }
+    } else {
+      if (!empresas.includes(val)) {
+        const updated = [...empresas, val];
+        setEmpresas(updated);
+        localStorage.setItem('empresasRut', JSON.stringify(updated));
+      }
     }
     setEmpresaRut(val);
     localStorage.setItem('empresaRut', val);
@@ -271,9 +315,20 @@ const Organigrama = () => {
           <input
             type="text"
             value={newEmpresa}
-            onChange={(e) => setNewEmpresa(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value.toUpperCase();
+              const clean = raw.replace(/[^\dK]/g, '');
+              let body = clean.slice(0, Math.max(0, clean.length - 1));
+              const dv = clean.slice(-1);
+              body = body.slice(0, 8);
+              let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+              if (dv) formatted = `${formatted}-${dv}`;
+              setNewEmpresa(formatted);
+            }}
             placeholder="RUT de la empresa"
             className="p-2 border rounded"
+            maxLength={12}
+            onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
           />
           <button
             onClick={handleAddEmpresa}
@@ -295,7 +350,7 @@ const Organigrama = () => {
             >
               <option value="">-- Seleccionar --</option>
               {empresas.map((er) => (
-                <option key={er} value={er}>{er}</option>
+                <option key={er} value={er}>{formatearRut(er)}</option>
               ))}
             </select>
             <button
@@ -426,7 +481,7 @@ const Organigrama = () => {
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-red-600">{error}</div>
         )}
-        {!loading && !error && treeData && empresas.includes(empresaRut) && (
+        {!loading && !error && treeData && empresas.some(er => normalizeRut(er) === normalizeRut(empresaRut)) && (
           <Tree
             data={treeData}
             orientation="vertical"
@@ -449,7 +504,7 @@ const Organigrama = () => {
             styles={{ links: { stroke: linkColor, strokeWidth: 2 } }}
           />
         )}
-        {!loading && !error && (!empresaRut || !empresas.includes(empresaRut)) && (
+        {!loading && !error && (!empresaRut || !empresas.some(er => normalizeRut(er) === normalizeRut(empresaRut))) && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-600">No tienes acceso a ninguna empresa o no hay selección.</div>
         )}
 

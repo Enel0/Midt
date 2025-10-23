@@ -14,6 +14,7 @@ const usuarioSchema = new mongoose.Schema({
   telefono: { type: String, required: true },
   password: { type: String, required: true },
   rol: { type: String, enum: ["admin", "usuario"], default: "usuario" },
+  empresasFavoritas: { type: [String], default: [] },
 });
 
 usuarioSchema.pre("save", async function (next) {
