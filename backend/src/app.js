@@ -8,6 +8,7 @@ import usuariosRoutes from "./routes/usuarios.js";
 import correoRoutes from "./correo.js";
 import organigramasRoutes from "./routes/organigramas.js";
 import denunciasRoutes from "./routes/denuncias.js";
+import solicitudesRoutes from "./routes/solicitudes.js";
 
 
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api/auth/login", loginRutas);
 app.use("/api", usuariosRoutes); // Registrar las rutas de usuarios
 app.use("/api/organigramas", organigramasRoutes);
 app.use("/api/denuncias", denunciasRoutes);
+app.use("/api/organigramas/solicitudes", solicitudesRoutes);
 
 
 //  Correo

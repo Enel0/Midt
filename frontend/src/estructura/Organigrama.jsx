@@ -321,7 +321,76 @@ const Organigrama = () => {
               </button>
             </>
           ) : (
-            <span className="text-sm">Pide a un administrador que te agregue al organigrama de tu empresa.</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="text"
+                value={newEmpresa}
+                onChange={(e) => {
+                  const raw = e.target.value.toUpperCase();
+                  const clean = raw.replace(/[^\dK]/g, '');
+                  let body = clean.slice(0, Math.max(0, clean.length - 1));
+                  const dv = clean.slice(-1);
+                  body = body.slice(0, 8);
+                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                  if (dv) formatted = `${formatted}-${dv}`;
+                  setNewEmpresa(formatted);
+                }}
+                placeholder="RUT de la empresa"
+                className="p-2 border rounded"
+                maxLength={12}
+                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
+              />
+              <input
+                type="text"
+                value={newCargo}
+                onChange={(e)=> setNewCargo(e.target.value)}
+                placeholder="Tu cargo propuesto"
+                className="p-2 border rounded"
+              />
+              <button
+                onClick={async ()=>{
+                  if (!validarRutFormato(newEmpresa) || !validarRutDV(newEmpresa)) { alert('RUT inválido'); return; }
+                  if (!newCargo) { alert('Ingresa un cargo'); return; }
+                  try {
+                    const token = localStorage.getItem('token');
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+                    const resp = await fetch('http://localhost:5000/api/organigramas/solicitudes', {
+                      method: 'POST', headers, body: JSON.stringify({ empresaRut: newEmpresa, cargoPropuesto: newCargo })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) throw new Error(data.message || 'No se pudo crear la solicitud');
+                    if (data.autoAprobada) {
+                      // Refrescar empresas del usuario
+                      const token2 = localStorage.getItem('token');
+                      const headers2 = token2 ? { Authorization: `Bearer ${token2}` } : {};
+                      const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers: headers2 });
+                      if (resMis.ok) {
+                        const mis = await resMis.json();
+                        const listaMis = Array.isArray(mis.empresas) ? mis.empresas : [];
+                        setEmpresas(listaMis);
+                        localStorage.setItem('empresasRut', JSON.stringify(listaMis));
+                        // seleccionar nueva empresa
+                        const match = listaMis.find(er => normalizeRut(er) === normalizeRut(newEmpresa));
+                        if (match) {
+                          setEmpresaRut(match);
+                          localStorage.setItem('empresaRut', match);
+                        }
+                      }
+                      alert('Unido automáticamente como primer miembro');
+                    } else {
+                      alert('Solicitud enviada; espera validación de un miembro.');
+                    }
+                    setNewEmpresa(''); setNewCargo('');
+                  } catch (e) {
+                    alert(e.message);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
+              >
+                Solicitar unirme
+              </button>
+            </div>
           )}
         </div>
       )}
