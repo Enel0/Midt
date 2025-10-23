@@ -10,11 +10,11 @@ router.post("/", crearDenuncia);
 // Listar denuncias (opcional ?empresaRut=...)
 router.get("/", listarDenuncias);
 
+// Mis denuncias (requiere auth) - declarar ANTES de la ruta ":id"
+router.get("/mias/list", protegerRuta, listarMisDenuncias);
+
 // Obtener una denuncia
 router.get("/:id", obtenerDenuncia);
-
-// Mis denuncias (requiere auth)
-router.get("/mias/list", protegerRuta, listarMisDenuncias);
 
 // Cambiar estado
 router.patch("/:id/estado", actualizarEstadoDenuncia);

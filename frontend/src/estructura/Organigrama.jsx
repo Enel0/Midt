@@ -70,6 +70,36 @@ const Organigrama = () => {
     if (savedSel) setEmpresaRut(savedSel);
   }, []);
 
+  // Cargar empresas permitidas para el usuario (no admin) según su RUT
+  const { user } = useContext(UserContext);
+  useEffect(() => {
+    const loadEmpresasUsuario = async () => {
+      // Si es admin, no restringimos
+      if (!user || user.rol === 'admin') return;
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
+        if (!res.ok) throw new Error('No se pudieron cargar tus empresas');
+        const data = await res.json();
+        const lista = Array.isArray(data.empresas) ? data.empresas : [];
+        setEmpresas(lista);
+        localStorage.setItem('empresasRut', JSON.stringify(lista));
+        // Si la seleccionada no está en la lista, limpiar selección
+        if (!lista.includes(empresaRut)) {
+          setEmpresaRut('');
+          localStorage.removeItem('empresaRut');
+        }
+      } catch (e) {
+        // Si falla, no mostrar empresas (forzar vacío)
+        setEmpresas([]);
+        setEmpresaRut('');
+      }
+    };
+    loadEmpresasUsuario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.rol]);
+
   useEffect(() => {
     const fetchTree = async () => {
       if (!empresaRut) return;
@@ -267,19 +297,23 @@ const Organigrama = () => {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newEmpresa}
-              onChange={(e) => setNewEmpresa(e.target.value)}
-              placeholder="Agregar nuevo RUT"
-              className="p-1 border rounded"
-            />
-            <button
-              onClick={handleAddEmpresa}
-              className="bg-[#FF540C] hover:bg-[#FF6A00] text-white text-sm font-semibold py-1 px-3 rounded"
-            >
-              Añadir
-            </button>
+            {user?.rol === 'admin' && (
+              <>
+                <input
+                  type="text"
+                  value={newEmpresa}
+                  onChange={(e) => setNewEmpresa(e.target.value)}
+                  placeholder="Agregar nuevo RUT"
+                  className="p-1 border rounded"
+                />
+                <button
+                  onClick={handleAddEmpresa}
+                  className="bg-[#FF540C] hover:bg-[#FF6A00] text-white text-sm font-semibold py-1 px-3 rounded"
+                >
+                  Añadir
+                </button>
+              </>
+            )}
             <button
               className="ml-2 px-3 py-1 border rounded hover:bg-blue-100"
               onClick={() => setMenuOpen((v) => !v)}
@@ -360,7 +394,7 @@ const Organigrama = () => {
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-red-600">{error}</div>
         )}
-        {!loading && !error && treeData && (
+        {!loading && !error && treeData && empresas.includes(empresaRut) && (
           <Tree
             data={treeData}
             orientation="vertical"
@@ -382,6 +416,9 @@ const Organigrama = () => {
             )}
             styles={{ links: { stroke: linkColor, strokeWidth: 2 } }}
           />
+        )}
+        {!loading && !error && (!empresaRut || !empresas.includes(empresaRut)) && (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-600">No tienes acceso a ninguna empresa o no hay selección.</div>
         )}
 
         {draggingId && (

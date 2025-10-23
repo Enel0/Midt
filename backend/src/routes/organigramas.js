@@ -6,7 +6,9 @@ import {
   listarNodos,
   listarRoots,
   obtenerArbol,
+  listarEmpresasDelUsuario,
 } from "../controllers/organigramaController.js";
+import { protegerRuta } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -28,5 +30,7 @@ router.patch("/nodos/:id", actualizarNodo);
 // Eliminar nodo (opcional ?cascade=true)
 router.delete("/nodos/:id", eliminarNodo);
 
-export default router;
+// Empresas donde participa el usuario (por RUT)
+router.get("/mis-empresas", protegerRuta, listarEmpresasDelUsuario);
 
+export default router;

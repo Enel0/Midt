@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import OrganigramaNodo from "../models/OrganigramaNodo.js";
 import Usuario from "../models/Usuario.js";
+import Usuario from "../models/Usuario.js";
 
 export const crearNodo = async (req, res) => {
   try {
@@ -193,5 +194,19 @@ export const obtenerArbol = async (req, res) => {
   } catch (error) {
     console.error("obtenerArbol error:", error);
     res.status(500).json({ message: "Error en el servidor" });
+  }
+};
+
+export const listarEmpresasDelUsuario = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'No autenticado' });
+    const usuario = await Usuario.findById(userId).lean();
+    if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' });
+    const ruts = await OrganigramaNodo.distinct('empresaRut', { trabajadorRut: usuario.rut, activo: true });
+    res.json({ empresas: ruts });
+  } catch (e) {
+    console.error('listarEmpresasDelUsuario error:', e);
+    res.status(500).json({ message: 'Error en el servidor' });
   }
 };
