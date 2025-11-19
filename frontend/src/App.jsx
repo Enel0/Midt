@@ -1,49 +1,58 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useContext } from "react";
 import { CartProvider } from "./context/CartContext";
-import { UserProvider } from "./context/UserContext"; // Importa el contexto de usuario
-import Navbar from "./components/Navbar"; // Importa la Navbar
+import { UserProvider, UserContext } from "./context/UserContext";
+import Navbar from "./components/Navbar";
 import Home from "./estructura/Home";
 import Organigrama from "./estructura/Organigrama";
-// Sushi pages removed
 import LoginForm from "./estructura/LoginForm";
 import RegistroForm from "./estructura/RegistroForm";
 import AsignarRoles from "./estructura/AsignarRoles";
-import Denuncias from './estructura/Denuncias';
-import Denunciar from './estructura/Denunciar';
-import Perfil from './estructura/Perfil';
-import MisDenuncias from './estructura/MisDenuncias';
-import AnaliticaDenuncias from './estructura/AnaliticaDenuncias';
+import Denuncias from "./estructura/Denuncias";
+import Denunciar from "./estructura/Denunciar";
+import Perfil from "./estructura/Perfil";
+import MisDenuncias from "./estructura/MisDenuncias";
+import AnaliticaDenuncias from "./estructura/AnaliticaDenuncias";
+
+const AppLayout = () => {
+  const { darkMode } = useContext(UserContext);
+
+  const textClass = darkMode ? "text-white" : "text-[#0D0A4F]";
+  const overlayClass = darkMode
+    ? "bg-gradient-to-b from-[#020617] via-[#050b27]/95 to-[#000103]"
+    : "bg-gradient-to-b from-[#e4ebff] via-[#f4f6ff] to-[#fbfbff]";
+
+  return (
+    <div className={`relative min-h-screen transition-colors duration-300 ${textClass}`}>
+      <div className={`pointer-events-none absolute inset-0 ${overlayClass}`} />
+      <div className="relative z-10 min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/organigrama" element={<Organigrama />} />
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/registro" element={<RegistroForm />} />
+            <Route path="/asignarRoles" element={<AsignarRoles />} />
+            <Route path="/denuncias" element={<Denuncias />} />
+            <Route path="/denunciar" element={<Denunciar />} />
+            <Route path="/denuncias/analitica" element={<AnaliticaDenuncias />} />
+            <Route path="/mis-denuncias" element={<MisDenuncias />} />
+            <Route path="/perfil" element={<Perfil />} />
+            <Route path="*" element={<h1>404 - Página no encontrada</h1>} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   return (
     <UserProvider>
       <CartProvider>
         <BrowserRouter>
-          {/* Navbar visible en todas las páginas */}
-          <Navbar />
-
-          {/* Rutas de la aplicación */}
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/organigrama" element={<Organigrama />} />
-            {/* removed carrito/pago */}
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/registro" element={<RegistroForm />} />
-            {/* removed estado-pedido */}
-
-            {/* Rutas antes protegidas, ahora abiertas */}
-            <Route path="/asignarRoles" element={<AsignarRoles />} />
-            {/* removed ventas/productos/comandas/comments */}
-            <Route path="/denuncias" element={<Denuncias />} />
-            <Route path="/denunciar" element={<Denunciar />} />
-            <Route path="/denuncias/analitica" element={<AnaliticaDenuncias />} />
-            <Route path="/mis-denuncias" element={<MisDenuncias />} />
-            <Route path="/perfil" element={<Perfil />} />
-
-
-            {/* Ruta de página no encontrada */}
-            <Route path="*" element={<h1>404 - Página no encontrada</h1>} />
-          </Routes>
+          <AppLayout />
         </BrowserRouter>
       </CartProvider>
     </UserProvider>

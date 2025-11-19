@@ -1,8 +1,12 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import logo from "../imagenes/logoSushi.jpg";
+import logo from "../Imagenes/logo2.png";
 import { regiones, comunasByRegion, validarRutFormato, validarRutDV, formatearRut } from "../utils/cl-regiones-comunas";
+import fondo1 from "../Imagenes/fondo1.jpg";
+import fondo2 from "../Imagenes/fondo2.jpg";
+import fondo3 from "../Imagenes/fondo3.png";
+import fondo4 from "../Imagenes/fondo4.png";
 
 function RegistroForm() {
   const navigate = useNavigate();
@@ -21,16 +25,17 @@ function RegistroForm() {
 
   const formatRutBody = (body) => body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   const handleRutChange = (e) => {
-    let only = (e.target.value || '').toUpperCase().replace(/[^\dkK]/g, '');
-    if (only.length === 0) { setValue('rut', ''); return; }
-    // separar cuerpo y DV
+    let only = (e.target.value || '').toUpperCase().replace(/[^\dK]/g, '');
+    if (only.length === 0) {
+      setValue('rut', '');
+      return;
+    }
     let body = only.length > 1 ? only.slice(0, -1) : only;
     let dv = only.length > 1 ? only.slice(-1) : '';
-    body = body.replace(/\D/g, '').slice(0, 8); // máx 8 dígitos en cuerpo
+    body = body.replace(/\D/g, '').slice(0, 8);
     if (!/[0-9K]/.test(dv)) dv = '';
     let formatted = formatRutBody(body);
     if (dv) formatted = `${formatted}-${dv}`;
-    // limitar largo total (ej: 12.345.678-5 => 12 chars)
     formatted = formatted.slice(0, 12);
     setValue('rut', formatted, { shouldValidate: true, shouldDirty: true });
   };
@@ -107,22 +112,44 @@ function RegistroForm() {
       });
   };
 
+  const fondos = useMemo(() => [fondo1, fondo2, fondo3, fondo4].filter(Boolean), []);
+  const [fondoActual, setFondoActual] = useState(0);
+
+  useEffect(() => {
+    if (fondos.length <= 1) return;
+    const interval = setInterval(() => {
+      setFondoActual((prev) => (prev + 1) % fondos.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [fondos.length]);
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl w-full">
-        <div className="text-center mb-6">
-          <img
-            src={logo}
-            alt="Logo Sushi"
-            className="mx-auto mb-4 max-h-24 object-contain"
+    <div className="min-h-screen relative overflow-hidden px-4 py-10 text-white flex items-center justify-center">
+      <div className="absolute inset-0">
+        {fondos.map((fondo, index) => (
+          <div
+            key={`${index}-${fondo}`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === fondoActual ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              backgroundImage: `url(${fondo})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
           />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050321]/90 via-[#09092f]/85 to-[#020315]/95" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-4xl bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-8 backdrop-blur">
+        <div className="text-center mb-6">
+          <img src={logo} alt="Logo Mi DT" className="mx-auto mb-4 max-h-24 object-contain" />
           <h2 className="text-2xl font-bold text-gray-800">Registro de Usuario</h2>
+          <p className="text-sm text-gray-500">Completa tus datos para comenzar a gestionar con Mi DT.</p>
         </div>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-        >
-          {/* Nombre */}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-gray-700 font-bold mb-1">Nombre</label>
             <input
@@ -133,7 +160,6 @@ function RegistroForm() {
             {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>}
           </div>
 
-          {/* Apellido */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Apellido</label>
             <input
@@ -144,7 +170,6 @@ function RegistroForm() {
             {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>}
           </div>
 
-          {/* RUT */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">RUT</label>
             <input
@@ -152,21 +177,17 @@ function RegistroForm() {
               {...register("rut", {
                 required: "El RUT es obligatorio",
                 validate: {
-                  formato: (v) => validarRutFormato(v) || "Formato esperado: 12.345.678-5",
-                  dv: (v) => validarRutDV(v) || "Dígito verificador inválido",
-                }
+                  formato: (value) => validarRutFormato(value) || "Formato inválido",
+                  dv: (value) => validarRutDV(value) || "Dígito verificador incorrecto",
+                },
               })}
-              onChange={handleRutChange}
-              onBlur={(e) => { setValue('rut', formatearRut(e.target.value)); }}
-              inputMode="numeric"
-              maxLength={12}
-              placeholder="12.345.678-5"
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+              onChange={handleRutChange}
+              placeholder="12.345.678-5"
             />
             {errors.rut && <p className="text-red-500 text-sm mt-1">{errors.rut.message}</p>}
           </div>
 
-          {/* Fecha de nacimiento */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Fecha de Nacimiento</label>
             <input
@@ -177,7 +198,6 @@ function RegistroForm() {
             {errors.birthDate && <p className="text-red-500 text-sm mt-1">{errors.birthDate.message}</p>}
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Correo Electrónico</label>
             <input
@@ -194,7 +214,6 @@ function RegistroForm() {
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
           </div>
 
-          {/* Dirección */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Dirección</label>
             <input
@@ -205,7 +224,6 @@ function RegistroForm() {
             {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>}
           </div>
 
-          {/* Región */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Región</label>
             <select
@@ -215,13 +233,14 @@ function RegistroForm() {
             >
               <option value="">Seleccionar...</option>
               {regiones.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
             {errors.region && <p className="text-red-500 text-sm mt-1">{errors.region.message}</p>}
           </div>
 
-          {/* Comuna */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Comuna</label>
             <select
@@ -230,15 +249,16 @@ function RegistroForm() {
               defaultValue=""
               disabled={!selectedRegion}
             >
-              <option value="">{selectedRegion ? "Seleccionar..." : "Selecciona una región primero"}</option>
+              <option value="">{selectedRegion ? "Seleccionar..." : "Selecciona una región"}</option>
               {comunas.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
             {errors.comuna && <p className="text-red-500 text-sm mt-1">{errors.comuna.message}</p>}
           </div>
 
-          {/* Género */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Género</label>
             <select
@@ -253,7 +273,6 @@ function RegistroForm() {
             {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender.message}</p>}
           </div>
 
-          {/* Teléfono */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Teléfono</label>
             <input
@@ -270,7 +289,6 @@ function RegistroForm() {
             {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>}
           </div>
 
-          {/* Contraseña */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Contraseña</label>
             <input
@@ -279,8 +297,7 @@ function RegistroForm() {
                 required: "La contraseña es obligatoria",
                 pattern: {
                   value: /^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/,
-                  message:
-                    "Debe tener al menos 8 caracteres, una mayúscula y un símbolo",
+                  message: "Debe tener 8 caracteres, una mayúscula y un símbolo",
                 },
               })}
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -288,15 +305,13 @@ function RegistroForm() {
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
           </div>
 
-          {/* Confirmar contraseña */}
           <div>
             <label className="block text-gray-700 font-bold mb-1">Confirmar Contraseña</label>
             <input
               type="password"
               {...register("confirmPassword", {
                 required: "Debes confirmar la contraseña",
-                validate: (value) =>
-                  value === password || "Las contraseñas no coinciden",
+                validate: (value) => value === password || "Las contraseñas no coinciden",
               })}
               className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
@@ -305,55 +320,49 @@ function RegistroForm() {
             )}
           </div>
 
-          {/* Botón para enviar código */}
           <div className="col-span-full">
-            <button
-              type="button"
-              onClick={enviarCodigo}
-              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-            >
-              Enviar Código de Verificación
-            </button>
-          </div>
-
-          {/* Campo para ingresar código */}
-          {codigoEnviado && (
-            <div className="col-span-full">
-              <label className="block text-gray-700 font-bold mb-1">Código de Verificación</label>
+            <label className="block text-gray-700 font-bold mb-1">Código de verificación</label>
+            {codigoEnviado ? (
               <input
                 type="text"
                 {...register("codigoVerificacion", {
                   required: "Debes ingresar el código enviado a tu correo",
-                  validate: (value) =>
-                    value === codigoGenerado || "El código ingresado no es válido",
+                  validate: (value) => value === codigoGenerado || "El código ingresado no es válido",
                 })}
                 className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Ingresa el código recibido"
               />
-              {errors.codigoVerificacion && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.codigoVerificacion.message}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Botones */}
-          <div className="col-span-full flex justify-between mt-4">
-            <button
-              type="submit"
-              className="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600"
-            >
-              Registrarse
-            </button>
-            <button
-              type="button"
-              className="bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
-              onClick={() => navigate("/login")}
-            >
-              Volver
-            </button>
+            ) : (
+              <button
+                type="button"
+                onClick={enviarCodigo}
+                className="w-full bg-[#FF540C] hover:bg-[#FF6A00] text-white py-3 rounded-full font-semibold shadow"
+              >
+                Enviar código
+              </button>
+            )}
+            {errors.codigoVerificacion && (
+              <p className="text-red-500 text-sm mt-1">{errors.codigoVerificacion.message}</p>
+            )}
           </div>
         </form>
+
+        <div className="flex flex-col sm:flex-row gap-4 mt-6">
+          <button
+            type="submit"
+            className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-full font-bold shadow"
+            onClick={handleSubmit(onSubmit)}
+          >
+            Registrar
+          </button>
+          <button
+            type="button"
+            className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-full font-semibold hover:bg-gray-50"
+            onClick={() => navigate("/login")}
+          >
+            Volver al inicio de sesión
+          </button>
+        </div>
       </div>
     </div>
   );

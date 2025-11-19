@@ -11,7 +11,7 @@ function Navbar() {
     <nav className="bg-[#0D0A4F] text-white py-4 px-6 flex justify-between items-center shadow-md">
       {/* Logo de la aplicación */}
       <h1
-        className="text-2xl font-bold cursor-pointer"
+        className="text-2xl font-bold cursor-pointer text-[#FF7A3D]"
         onClick={() => navigate("/")}
       >
         Mi DT

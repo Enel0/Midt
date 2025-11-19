@@ -1,8 +1,12 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
-import logo from "../imagenes/logoSushi.jpg";
+import logo from "../Imagenes/logo2.png";
+import fondo1 from "../Imagenes/fondo1.jpg";
+import fondo2 from "../Imagenes/fondo2.jpg";
+import fondo3 from "../Imagenes/fondo3.png";
+import fondo4 from "../Imagenes/fondo4.png";
 
 function LoginForm() {
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm();
@@ -115,11 +119,40 @@ function LoginForm() {
     }
   };
 
+  const fondos = useMemo(() => [fondo1, fondo2, fondo3, fondo4].filter(Boolean), []);
+  const [fondoActual, setFondoActual] = useState(0);
+
+  useEffect(() => {
+    if (fondos.length <= 1) return;
+    const interval = setInterval(() => {
+      setFondoActual((prev) => (prev + 1) % fondos.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [fondos.length]);
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded shadow-lg max-w-md w-full">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10 text-white">
+      <div className="absolute inset-0">
+        {fondos.map((fondo, index) => (
+          <div
+            key={`${index}-${fondo}`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === fondoActual ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              backgroundImage: `url(${fondo})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050321]/90 via-[#09092f]/85 to-[#020315]/95" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md bg-white/95 text-gray-800 rounded-3xl shadow-2xl p-8 backdrop-blur">
         <div className="text-center mb-6">
-          <img src={logo} alt="Logo Sushi" className="mx-auto mb-4 max-h-24 object-contain" />
+          <img src={logo} alt="Logo Mi DT" className="mx-auto mb-4 max-h-24 object-contain" />
+          <p className="text-sm text-gray-500">Gestiona tu acceso a Mi DT con seguridad.</p>
         </div>
 
         {step === "login" && (
@@ -130,7 +163,7 @@ function LoginForm() {
                 <label className="block text-gray-700 font-bold mb-2">Correo Electrónico</label>
                 <input
                   type="email"
-                  className="w-full p-3 border rounded"
+                  className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
                   {...register("email", { required: "El correo electrónico es obligatorio" })}
                 />
                 {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
@@ -139,19 +172,19 @@ function LoginForm() {
                 <label className="block text-gray-700 font-bold mb-2">Contraseña</label>
                 <input
                   type="password"
-                  className="w-full p-3 border rounded"
+                  className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
                   {...register("password", { required: "La contraseña es obligatoria" })}
                 />
                 {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
               </div>
               {errorMessage && <p className="text-red-500 text-sm mb-4">{errorMessage}</p>}
-              <button type="submit" className="w-full bg-orange-500 text-white py-2 rounded">
+              <button type="submit" className="w-full bg-[#FF540C] hover:bg-[#FF6A00] text-white py-3 rounded-full font-semibold shadow">
                 {loading ? "Cargando..." : "Iniciar Sesión"}
               </button>
             </form>
             <div className="text-center mt-4">
               <button
-                className="text-orange-500 hover:underline"
+                className="text-[#FF540C] hover:underline font-medium"
                 onClick={() => {
                   setStep("sendCode");
                   setErrorMessage("");
@@ -170,13 +203,13 @@ function LoginForm() {
             <input
               type="email"
               placeholder="Ingresa tu correo"
-              className="w-full p-3 border rounded mb-3"
+              className="w-full p-3 border rounded mb-3 focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
             <button
-              className="w-full bg-orange-500 text-white py-2 rounded mb-2"
+              className="w-full bg-[#FF540C] hover:bg-[#FF6A00] text-white py-2.5 rounded-full font-semibold shadow mb-2"
               onClick={enviarCodigo}
               disabled={loading || !email}
             >
@@ -201,13 +234,13 @@ function LoginForm() {
             <input
               type="text"
               placeholder="Código"
-              className="w-full p-3 border rounded mb-3"
+              className="w-full p-3 border rounded mb-3 focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
               value={codigoIngresado}
               onChange={(e) => setCodigoIngresado(e.target.value)}
             />
             {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
             <button
-              className="w-full bg-orange-500 text-white py-2 rounded mb-2"
+              className="w-full bg-[#FF540C] hover:bg-[#FF6A00] text-white py-2.5 rounded-full font-semibold shadow mb-2"
               onClick={verificarCodigo}
               disabled={loading || !codigoIngresado}
             >
@@ -233,14 +266,14 @@ function LoginForm() {
               <input
                 type="password"
                 placeholder="Nueva contraseña"
-                className="w-full p-3 border rounded mb-3"
+                className="w-full p-3 border rounded mb-3 focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
                 {...register("newPassword", { required: "La contraseña es obligatoria" })}
               />
               {errors.newPassword && <p className="text-red-500 mb-2">{errors.newPassword.message}</p>}
               {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
               <button
                 type="submit"
-                className="w-full bg-orange-500 text-white py-2 rounded"
+                className="w-full bg-[#FF540C] hover:bg-[#FF6A00] text-white py-2.5 rounded-full font-semibold shadow"
                 disabled={loading}
               >
                 {loading ? "Cambiando contraseña..." : "Cambiar contraseña"}
