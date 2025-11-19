@@ -71,6 +71,7 @@ export const registro = async (req, res) => {
         nombre: nuevoUsuario.nombre,
         email: nuevoUsuario.email,
         rol: nuevoUsuario.rol,
+        empresaAdministra: nuevoUsuario.empresaAdministra || null,
       },
     });
   } catch (error) {

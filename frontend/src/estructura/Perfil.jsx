@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { UserContext } from '../context/UserContext';
+import { formatearRut } from '../utils/cl-regiones-comunas';
 
 const Perfil = () => {
   const { user } = useContext(UserContext);
@@ -85,6 +86,9 @@ const Perfil = () => {
             <div><span className="font-semibold">Comuna: </span>{user.comuna || '-'}</div>
             <div><span className="font-semibold">Sexo: </span>{user.sexo || '-'}</div>
             <div><span className="font-semibold">Rol: </span>{user.rol || '-'}</div>
+            {user.rol === 'admin_empresa' && (
+              <div><span className="font-semibold">Empresa asignada: </span>{user.empresaAdministra ? formatearRut(user.empresaAdministra) : '-'}</div>
+            )}
           </div>
         ) : (
           <div className="mb-8">No has iniciado sesión.</div>

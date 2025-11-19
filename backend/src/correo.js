@@ -24,7 +24,7 @@ router.post("/enviar-codigo", async (req, res) => {
   });
 
   const mailOptions = {
-    from: "Fukusuke 🍣 <fukusukesushiverificador@gmail.com>",
+    from: "Mi DT  <MiDTverificador@gmail.com>",
     to: email,
     subject: "Tu código de verificación",
     text: `Tu código de verificación es: ${codigo}`,

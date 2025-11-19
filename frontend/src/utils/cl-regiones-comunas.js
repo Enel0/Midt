@@ -50,3 +50,4 @@ export function formatearRut(rut) {
   return `${withDots}-${dv}`;
 }
 
+

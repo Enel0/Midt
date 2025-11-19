@@ -7,6 +7,7 @@ export const generarToken = (usuario) => {
     email: usuario.email,
     rol: usuario.rol,
     rut: usuario.rut,
+    empresaAdministra: usuario.empresaAdministra || null,
   };
   const secret = process.env.JWT_SECRET || "clave_secreta_super_segura";
   // 7 días por defecto

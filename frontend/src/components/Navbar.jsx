@@ -38,6 +38,7 @@ function Navbar() {
             {user.rol === "admin" && (
               <>
                 <button onClick={() => navigate("/asignarRoles")} className="hover:underline">Asignar Roles</button>
+                <button onClick={() => navigate("/denuncias/analitica")} className="hover:underline">Analítica de Denuncias</button>
               </>
             )}
 

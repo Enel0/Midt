@@ -32,6 +32,7 @@ router.post("/", async (req, res) => {
         email: usuario.email,
         rol: usuario.rol,
         rut: usuario.rut,
+        empresaAdministra: usuario.empresaAdministra || null,
       },
     });
   } catch (error) {

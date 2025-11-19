@@ -1,6 +1,29 @@
 // Controlador de denuncias: creación, listado, detalle y cambio de estado
 import Denuncia from "../models/Denuncia.js";
 import OrganigramaNodo from "../models/OrganigramaNodo.js";
+import Usuario from "../models/Usuario.js";
+
+const calcEdad = (fecha) => {
+  if (!fecha) return null;
+  const birth = new Date(fecha);
+  if (Number.isNaN(birth.getTime())) return null;
+  const diff = Date.now() - birth.getTime();
+  return Math.max(0, Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000)));
+};
+
+const rangoEdad = (edad) => {
+  if (edad === null) return "Sin datos";
+  if (edad < 25) return "Menos de 25";
+  if (edad < 35) return "25-34";
+  if (edad < 45) return "35-44";
+  if (edad < 55) return "45-54";
+  return "55 o m\u00E1s";
+};
+
+const toSortedArray = (obj, labelKey) =>
+  Object.entries(obj || {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, total]) => ({ [labelKey]: label, total }));
 
 // Crea una denuncia. Acepta multipart/form-data con posibles archivos "evidencias".
 export const crearDenuncia = async (req, res) => {
@@ -171,6 +194,110 @@ export const actualizarEstadoDenuncia = async (req, res) => {
     res.json(doc);
   } catch (e) {
     console.error("actualizarEstadoDenuncia error:", e);
+    res.status(500).json({ message: "Error en el servidor" });
+  }
+};
+
+export const estadisticasDenuncias = async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+    const filtro = {};
+    if (desde || hasta) {
+      filtro.createdAt = {};
+      if (desde) filtro.createdAt.$gte = new Date(desde);
+      if (hasta) filtro.createdAt.$lte = new Date(hasta);
+    }
+    const denuncias = await Denuncia.find(filtro).lean();
+    const total = denuncias.length;
+    const uniqueRuts = [...new Set(denuncias.map(d => d.trabajadorRut).filter(Boolean))];
+    const uniqueVictimasIds = [
+      ...new Set(denuncias.map(d => (d.createdBy ? d.createdBy.toString() : null)).filter(Boolean))
+    ];
+
+    const [agresores, victimas] = await Promise.all([
+      uniqueRuts.length
+        ? Usuario.find({ rut: { $in: uniqueRuts } }, "rut region sexo fechaNacimiento").lean()
+        : [],
+      uniqueVictimasIds.length
+        ? Usuario.find({ _id: { $in: uniqueVictimasIds } }, "sexo region fechaNacimiento").lean()
+        : [],
+    ]);
+
+    const agresorMap = new Map(agresores.map((a) => [a.rut, a]));
+    const victimaMap = new Map(victimas.map((v) => [v._id.toString(), v]));
+
+    const porRegion = {};
+    const sexoAgresores = {};
+    const sexoVictimas = {};
+    const rangosEdadAgresores = {};
+    let sumaEdades = 0;
+    let conteoEdades = 0;
+    const estados = {};
+    const motivos = {};
+    const tiposFrecuentes = {};
+    const timelineMensual = {};
+
+    for (const denuncia of denuncias) {
+      const agresor = denuncia.trabajadorRut ? agresorMap.get(denuncia.trabajadorRut) : null;
+      const region = agresor?.region || "Sin datos";
+      porRegion[region] = (porRegion[region] || 0) + 1;
+
+      const sexoAgresor = agresor?.sexo || "Sin datos";
+      sexoAgresores[sexoAgresor] = (sexoAgresores[sexoAgresor] || 0) + 1;
+
+      const edad = calcEdad(agresor?.fechaNacimiento);
+      if (edad !== null) {
+        sumaEdades += edad;
+        conteoEdades += 1;
+      }
+      const rango = rangoEdad(edad);
+      rangosEdadAgresores[rango] = (rangosEdadAgresores[rango] || 0) + 1;
+
+      const victima = denuncia.createdBy ? victimaMap.get(denuncia.createdBy.toString()) : null;
+      const sexoVictima = victima?.sexo || "Sin datos";
+      sexoVictimas[sexoVictima] = (sexoVictimas[sexoVictima] || 0) + 1;
+
+      const estadoKey = denuncia.estado || "Sin estado";
+      estados[estadoKey] = (estados[estadoKey] || 0) + 1;
+
+      const motivoKey = denuncia.motivo?.trim() || "Sin especificar";
+      motivos[motivoKey] = (motivos[motivoKey] || 0) + 1;
+
+      (denuncia.tipos || []).forEach((t) => {
+        const key = (t || "Sin clasificar").trim();
+        tiposFrecuentes[key] = (tiposFrecuentes[key] || 0) + 1;
+      });
+
+      if (denuncia.createdAt) {
+        const d = new Date(denuncia.createdAt);
+        if (!Number.isNaN(d.getTime())) {
+          const periodo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          timelineMensual[periodo] = (timelineMensual[periodo] || 0) + 1;
+        }
+      }
+    }
+
+    const timeline = Object.entries(timelineMensual)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([periodo, totalPeriodo]) => ({ periodo, total: totalPeriodo }));
+
+    res.json({
+      total,
+      filtros: { desde: desde || null, hasta: hasta || null },
+      porRegion: toSortedArray(porRegion, "region"),
+      sexoAgresores: toSortedArray(sexoAgresores, "sexo"),
+      sexoVictimas: toSortedArray(sexoVictimas, "sexo"),
+      edadesAgresores: {
+        promedio: conteoEdades ? Math.round((sumaEdades / conteoEdades) * 10) / 10 : null,
+        rangos: toSortedArray(rangosEdadAgresores, "rango"),
+      },
+      estados: toSortedArray(estados, "estado"),
+      topMotivos: toSortedArray(motivos, "motivo").slice(0, 5),
+      tiposFrecuentes: toSortedArray(tiposFrecuentes, "tipo").slice(0, 5),
+      timelineMensual: timeline,
+    });
+  } catch (e) {
+    console.error("estadisticasDenuncias error:", e);
     res.status(500).json({ message: "Error en el servidor" });
   }
 };

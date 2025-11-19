@@ -221,8 +221,14 @@ export const listarEmpresasDelUsuario = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'No autenticado' });
     const usuario = await Usuario.findById(userId).lean();
     if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' });
-    const ruts = await OrganigramaNodo.distinct('empresaRut', { trabajadorRut: usuario.rut, activo: true });
-    res.json({ empresas: ruts });
+    const empresas = await OrganigramaNodo.distinct('empresaRut', { trabajadorRut: usuario.rut, activo: true });
+    const set = new Set(empresas);
+    if (usuario.rol === 'admin' || usuario.rol === 'admin_empresa') {
+      if (usuario.empresaAdministra) {
+        set.add(usuario.empresaAdministra);
+      }
+    }
+    res.json({ empresas: Array.from(set) });
   } catch (e) {
     console.error('listarEmpresasDelUsuario error:', e);
     res.status(500).json({ message: 'Error en el servidor' });

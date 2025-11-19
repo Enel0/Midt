@@ -1,25 +1,68 @@
-import React, { useEffect, useContext, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useContext, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tree from 'react-d3-tree';
 import { UserContext } from '../context/UserContext';
 import { validarRutFormato, validarRutDV, formatearRut } from '../utils/cl-regiones-comunas';
 
+const normalizeRut = (r) => (r || '').toUpperCase().replace(/[.\-]/g, '');
+
 const palette = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 const getColorByDepth = (depth) => palette[depth % palette.length];
 
-const CustomNode = ({ nodeDatum, toggleNode, hierarchyPointNode, onStartDrag, onDropOnNode, onSelect, selectedId }) => {
+const stopNativePropagation = (evt) => {
+  if (!evt) return;
+  evt.preventDefault?.();
+  evt.stopPropagation?.();
+  if (evt.nativeEvent) {
+    evt.nativeEvent.preventDefault?.();
+    evt.nativeEvent.stopPropagation?.();
+    evt.nativeEvent.stopImmediatePropagation?.();
+  }
+};
+
+const CustomNode = ({
+  nodeDatum,
+  hierarchyPointNode,
+  onStartDrag,
+  onHoverTarget,
+  onHoverEnd,
+  onSelect,
+  selectedId,
+  isDragging,
+  draggingId,
+  dropTargetId,
+}) => {
   const depth = hierarchyPointNode?.depth ?? 0;
   const fill = getColorByDepth(depth);
-  const isSelected = selectedId && (nodeDatum?.id === selectedId);
+  const isSelected = Boolean(selectedId && nodeDatum?.id === selectedId);
+  const isDropCandidate = Boolean(isDragging && dropTargetId && nodeDatum?.id === dropTargetId && draggingId !== nodeDatum?.id);
+  const strokeColor = isDropCandidate ? "#2563EB" : (isSelected ? "#FF540C" : "#0D0A4F");
+  const strokeWidth = isDropCandidate ? 4 : (isSelected ? 4 : 2);
 
   return (
     <g
-      onClick={(e) => { e.stopPropagation(); onSelect?.(nodeDatum); }}
-      onMouseDown={(e) => { e.stopPropagation(); onStartDrag?.(nodeDatum); }}
-      onMouseUp={(e) => { e.stopPropagation(); onDropOnNode?.(nodeDatum); }}
-      style={{ cursor: 'pointer' }}
+      onClick={(e) => {
+        stopNativePropagation(e);
+        if (!isDragging) onSelect?.(nodeDatum);
+      }}
+      onMouseDown={(e) => {
+        if (e.button !== 0) return;
+        stopNativePropagation(e);
+        if (!isDragging) onStartDrag?.(e, nodeDatum);
+      }}
+      onMouseEnter={(e) => {
+        if (!isDragging || draggingId === nodeDatum?.id) return;
+        stopNativePropagation(e);
+        onHoverTarget?.(nodeDatum);
+      }}
+      onMouseLeave={(e) => {
+        if (!isDragging) return;
+        stopNativePropagation(e);
+        if (dropTargetId === nodeDatum?.id) onHoverEnd?.(nodeDatum);
+      }}
+      style={{ cursor: isDragging ? 'grabbing' : 'pointer' }}
     >
-      <rect x={-90} y={-28} rx={12} width={180} height={56} fill={fill} stroke={isSelected ? "#FF540C" : "#0D0A4F"} strokeWidth={isSelected ? 4 : 2} />
+      <rect x={-90} y={-28} rx={12} width={180} height={56} fill={fill} stroke={strokeColor} strokeWidth={strokeWidth} />
       <text x={0} y={-4} textAnchor="middle" fontWeight="700" fontSize="14" fill="#FFFFFF">
         {nodeDatum.name}
       </text>
@@ -45,8 +88,35 @@ const Organigrama = () => {
   const navigate = useNavigate();
   const [selectedNode, setSelectedNode] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
+  const [draggingNode, setDraggingNode] = useState(null);
+  const [dragPosition, setDragPosition] = useState(null);
+  const [dropTargetNode, setDropTargetNode] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const normalizeRut = (r) => (r || '').toUpperCase().replace(/[.\-]/g, '');
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveContext, setMoveContext] = useState('reasign');
+  const [moveTargetId, setMoveTargetId] = useState('');
+  const [moveSearch, setMoveSearch] = useState('');
+  const [showDivisionModal, setShowDivisionModal] = useState(false);
+  const [divisionRut, setDivisionRut] = useState('');
+  const [divisionNombre, setDivisionNombre] = useState('');
+  const [divisionCargo, setDivisionCargo] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const { user } = useContext(UserContext);
+  const isAdmin = user?.rol === 'admin';
+  const isEmpresaAdmin = user?.rol === 'admin_empresa';
+  const empresaAsignada = user?.empresaAdministra || '';
+  const mergeEmpresasConAsignada = useCallback(
+    (lista = []) => {
+      const base = Array.isArray(lista) ? [...lista] : [];
+      if (isEmpresaAdmin && empresaAsignada) {
+        const exists = base.some((er) => normalizeRut(er) === normalizeRut(empresaAsignada));
+        if (!exists) base.push(empresaAsignada);
+      }
+      return base;
+    },
+    [isEmpresaAdmin, empresaAsignada]
+  );
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
@@ -68,22 +138,36 @@ const Organigrama = () => {
     const savedListRaw = localStorage.getItem('empresasRut');
     let list = [];
     try { list = savedListRaw ? JSON.parse(savedListRaw) : []; } catch { list = []; }
-    setEmpresas(Array.isArray(list) ? list : []);
-    if (savedSel) setEmpresaRut(savedSel);
-  }, []);
+    const finalList = mergeEmpresasConAsignada(Array.isArray(list) ? list : []);
+    setEmpresas(finalList);
+    localStorage.setItem('empresasRut', JSON.stringify(finalList));
+    if (finalList.length === 0) {
+      setEmpresaRut('');
+      localStorage.removeItem('empresaRut');
+      return;
+    }
+    const fallback = isEmpresaAdmin && empresaAsignada ? empresaAsignada : finalList[0];
+    const preferred = savedSel || fallback;
+    const match = finalList.find((er) => normalizeRut(er) === normalizeRut(preferred));
+    if (match) {
+      setEmpresaRut(match);
+      localStorage.setItem('empresaRut', match);
+    } else {
+      setEmpresaRut(fallback);
+      localStorage.setItem('empresaRut', fallback);
+    }
+  }, [mergeEmpresasConAsignada, isEmpresaAdmin, empresaAsignada]);
 
-  // Cargar empresas permitidas para el usuario (no admin) según su RUT
-  const { user } = useContext(UserContext);
+  // Cargar empresas permitidas para el usuario (no admin) segun su RUT
   useEffect(() => {
     const loadEmpresasUsuario = async () => {
-      // Si es admin, no restringimos
-      if (!user || user.rol === 'admin') return;
+      if (!user || isAdmin) return;
       try {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
         if (resMis.status === 401) {
-          alert('Tu sesión expiró o es inválida. Inicia sesión nuevamente.');
+          alert('Tu sesion expiro o es invalida. Inicia sesion nuevamente.');
           localStorage.removeItem('token');
           localStorage.removeItem('empresaRut');
           localStorage.removeItem('empresasRut');
@@ -92,32 +176,34 @@ const Organigrama = () => {
         }
         if (!resMis.ok) throw new Error('No se pudieron cargar tus empresas');
         const dataMis = await resMis.json();
-        const listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
+        let listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
+        listaMis = mergeEmpresasConAsignada(listaMis);
         setEmpresas(listaMis);
         localStorage.setItem('empresasRut', JSON.stringify(listaMis));
-        // Preservar selección por RUT normalizado
-        const saved = localStorage.getItem('empresaRut') || empresaRut;
-        const match = listaMis.find(er => normalizeRut(er) === normalizeRut(saved));
+        const saved = localStorage.getItem('empresaRut');
+        const defaultRut = isEmpresaAdmin && empresaAsignada ? empresaAsignada : (listaMis[0] || '');
+        const prefer = saved || defaultRut;
+        const match = listaMis.find((er) => normalizeRut(er) === normalizeRut(prefer));
         if (match) {
           setEmpresaRut(match);
           localStorage.setItem('empresaRut', match);
+        } else if (listaMis.length > 0) {
+          setEmpresaRut(listaMis[0]);
+          localStorage.setItem('empresaRut', listaMis[0]);
         } else {
-          if (listaMis.length > 0) {
-            setEmpresaRut(listaMis[0]);
-            localStorage.setItem('empresaRut', listaMis[0]);
-          } else {
-            setEmpresaRut('');
-            localStorage.removeItem('empresaRut');
-          }
+          setEmpresaRut('');
+          localStorage.removeItem('empresaRut');
         }
       } catch (e) {
         setEmpresas([]);
         setEmpresaRut('');
+        localStorage.removeItem('empresaRut');
+        localStorage.removeItem('empresasRut');
       }
     };
     loadEmpresasUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.rol]);
+  }, [user?.rol, mergeEmpresasConAsignada, isAdmin, isEmpresaAdmin, empresaAsignada]);
 
   useEffect(() => {
     const fetchTree = async () => {
@@ -155,21 +241,103 @@ const Organigrama = () => {
     [darkMode]
   );
 
+  const { flatNodes, parentMap } = useMemo(() => {
+    if (!treeData) return { flatNodes: [], parentMap: {} };
+    const nodes = [];
+    const parents = {};
+    const visit = (node, depth = 0, parentId = null) => {
+      if (!node) return;
+      if (node.id) {
+        const indent = depth > 0 ? `${'· '.repeat(depth)} ` : '';
+        nodes.push({
+          id: node.id,
+          label: `${indent}${node.name || 'Sin cargo'}`,
+          node,
+          depth,
+        });
+        parents[node.id] = parentId;
+        if (Array.isArray(node.children)) {
+          node.children.forEach((child) => visit(child, depth + 1, node.id));
+        }
+      } else if (Array.isArray(node.children)) {
+        node.children.forEach((child) => visit(child, depth, parentId));
+      }
+    };
+    if (Array.isArray(treeData)) treeData.forEach((n) => visit(n, 0, null));
+    else visit(treeData, 0, null);
+    return { flatNodes: nodes, parentMap: parents };
+  }, [treeData]);
+
+  const excludedMoveIds = useMemo(() => {
+    const ids = new Set();
+    const walk = (node) => {
+      if (!node?.id) return;
+      ids.add(node.id);
+      if (Array.isArray(node.children)) node.children.forEach(walk);
+    };
+    if (selectedNode?.id) walk(selectedNode);
+    return ids;
+  }, [selectedNode]);
+
+  const moveableTargets = useMemo(() => {
+    return flatNodes.filter((entry) => !excludedMoveIds.has(entry.id));
+  }, [flatNodes, excludedMoveIds]);
+
+  const moveModalTitle = useMemo(() => {
+    switch (moveContext) {
+      case 'equipo':
+        return 'Mover a otro equipo';
+      case 'bajar':
+        return 'Bajar a un nuevo nivel';
+      default:
+        return 'Reasignar jefe directo';
+    }
+  }, [moveContext]);
+
+  const moveOptionsFiltered = useMemo(() => {
+    const term = moveSearch.trim().toLowerCase();
+    const base = [];
+    if (selectedNode?.id) {
+      base.push({
+        id: 'root',
+        label: 'Nivel raíz (sin jefe directo)',
+        subtitle: 'Moverá el nodo al nivel superior',
+      });
+    }
+    moveableTargets.forEach((opt) => {
+      const subtitle = opt.node?.attributes?.title || opt.node?.trabajadorRut || '';
+      base.push({
+        id: opt.id,
+        label: opt.label,
+        subtitle,
+      });
+    });
+    if (!term) return base;
+    return base.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(term) ||
+        (opt.subtitle || '').toLowerCase().includes(term)
+    );
+  }, [moveableTargets, moveSearch, selectedNode]);
+
   const handleAddEmpresa = async () => {
     let val = (newEmpresa || '').trim();
     if (!val) return;
     if (!validarRutFormato(val) || !validarRutDV(val)) {
-      alert('RUT de empresa inválido. Formato esperado 12.345.678-5');
+      alert('RUT de empresa invalido. Formato esperado 12.345.678-5');
       return;
     }
-    if (user && user.rol !== 'admin') {
-      alert('Solo puedes ver empresas donde tu RUT aparece en el organigrama. Pide a un administrador que te agregue.');
-    } else {
-      if (!empresas.includes(val)) {
-        const updated = [...empresas, val];
-        setEmpresas(updated);
-        localStorage.setItem('empresasRut', JSON.stringify(updated));
+    if (user && !isAdmin) {
+      const mismoRut = isEmpresaAdmin && empresaAsignada && normalizeRut(val) === normalizeRut(empresaAsignada);
+      if (!mismoRut) {
+        alert('Solo puedes ver empresas donde tu RUT aparece en el organigrama. Pide a un administrador que te agregue.');
+        return;
       }
+    }
+    if (!empresas.some((er) => normalizeRut(er) === normalizeRut(val))) {
+      const updated = [...empresas, val];
+      setEmpresas(updated);
+      localStorage.setItem('empresasRut', JSON.stringify(updated));
     }
     setEmpresaRut(val);
     localStorage.setItem('empresaRut', val);
@@ -183,13 +351,24 @@ const Organigrama = () => {
 
   const handleTreeAreaClick = () => { /* no-op: ya no abre el cuadro */ };
 
-  const handleStartDrag = (nodeDatum) => {
+  const handleStartDrag = (event, nodeDatum) => {
     if (!nodeDatum?.id) return;
     setDraggingId(nodeDatum.id);
+    setDraggingNode(nodeDatum);
+    setDragPosition({ x: event.clientX, y: event.clientY });
+    setDropTargetNode(null);
+    setIsDragging(true);
   };
-  const handleDropOnNode = async (targetNode) => {
-    if (!draggingId || !targetNode?.id) return;
-    if (draggingId === targetNode.id) { setDraggingId(null); return; }
+
+  const handleDropOnNode = useCallback(async (targetNode) => {
+    if (!draggingId || !targetNode?.id) {
+      setDraggingId(null);
+      return;
+    }
+    if (draggingId === targetNode.id) {
+      setDraggingId(null);
+      return;
+    }
     try {
       await fetch(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(draggingId)}`, {
         method: 'PATCH',
@@ -208,7 +387,68 @@ const Organigrama = () => {
     } finally {
       setDraggingId(null);
     }
-  };
+  }, [draggingId, empresaRut]);
+
+  const clearDragVisuals = useCallback(() => {
+    setIsDragging(false);
+    setDraggingNode(null);
+    setDropTargetNode(null);
+    setDragPosition(null);
+  }, []);
+
+  const finalizeDrag = useCallback(() => {
+    if (dropTargetNode && dropTargetNode.id && draggingId && dropTargetNode.id !== draggingId) {
+      handleDropOnNode(dropTargetNode);
+    } else {
+      setDraggingId(null);
+    }
+    clearDragVisuals();
+  }, [dropTargetNode, draggingId, handleDropOnNode, clearDragVisuals]);
+
+  useEffect(() => {
+    if (!isDragging) return undefined;
+    const handleMove = (evt) => {
+      evt.preventDefault();
+      setDragPosition({ x: evt.clientX, y: evt.clientY });
+    };
+    const handleUp = (evt) => {
+      evt.preventDefault();
+      finalizeDrag();
+    };
+    const handleKey = (evt) => {
+      if (evt.key === 'Escape') {
+        evt.preventDefault();
+        setDraggingId(null);
+        clearDragVisuals();
+      }
+    };
+    window.addEventListener('mousemove', handleMove, { passive: false });
+    window.addEventListener('mouseup', handleUp, { passive: false });
+    window.addEventListener('keydown', handleKey);
+    const prevCursor = document.body.style.cursor;
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('keydown', handleKey);
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevSelect;
+    };
+  }, [isDragging, finalizeDrag, clearDragVisuals]);
+
+  const handleHoverTarget = useCallback((nodeDatum) => {
+    setDropTargetNode(nodeDatum);
+  }, []);
+
+  const handleHoverLeave = useCallback((nodeDatum) => {
+    setDropTargetNode((current) => {
+      if (!current) return current;
+      if (nodeDatum?.id === current.id) return null;
+      return current;
+    });
+  }, []);
 
   const handleSelect = (nodeDatum) => {
     setSelectedNode(nodeDatum);
@@ -226,6 +466,137 @@ const Organigrama = () => {
         setTreeData(normalized);
       }
     } catch {}
+  };
+
+  const patchNodeParent = useCallback(async (nodeId, parentId) => {
+    if (!nodeId) throw new Error('Nodo inválido');
+    const res = await fetch(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(nodeId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent: parentId ?? null }),
+    });
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = null;
+    }
+    if (!res.ok) {
+      const message = data?.message || 'No se pudo actualizar el nodo';
+      throw new Error(message);
+    }
+    await refreshTree();
+  }, [refreshTree]);
+
+  const openMoveModal = (context = 'reasign') => {
+    if (!selectedNode?.id) {
+      alert('Selecciona un nodo primero.');
+      return;
+    }
+    setMoveContext(context);
+    setMoveSearch('');
+    setMoveTargetId('');
+    setShowMoveModal(true);
+  };
+
+  const closeMoveModal = () => {
+    if (actionLoading) return;
+    setShowMoveModal(false);
+    setMoveTargetId('');
+    setMoveSearch('');
+  };
+
+  const handleConfirmMove = async () => {
+    if (!selectedNode?.id || !moveTargetId) return;
+    setActionLoading(true);
+    try {
+      const parentId = moveTargetId === 'root' ? null : moveTargetId;
+      await patchNodeParent(selectedNode.id, parentId);
+      setShowMoveModal(false);
+      setMoveTargetId('');
+    } catch (err) {
+      alert(err.message || 'No se pudo mover el nodo');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePromoteLevel = async () => {
+    if (!selectedNode?.id) return;
+    const parentId = parentMap[selectedNode.id];
+    if (!parentId) {
+      alert('Este nodo ya está en el nivel raíz.');
+      return;
+    }
+    const grandParentId = parentMap[parentId] || null;
+    setActionLoading(true);
+    try {
+      await patchNodeParent(selectedNode.id, grandParentId);
+    } catch (err) {
+      alert(err.message || 'No se pudo subir de nivel');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openDivisionModal = () => {
+    if (!selectedNode?.id) {
+      alert('Selecciona un nodo para crearle una división por encima.');
+      return;
+    }
+    setDivisionRut('');
+    setDivisionNombre('');
+    setDivisionCargo('');
+    setShowDivisionModal(true);
+  };
+
+  const handleCreateDivision = async () => {
+    if (!empresaRut || !selectedNode?.id) return;
+    const rut = formatearRut(divisionRut || '');
+    if (!rut || !validarRutFormato(rut) || !validarRutDV(rut)) {
+      alert('Ingresa un RUT válido para la nueva división.');
+      return;
+    }
+    if (!divisionCargo.trim()) {
+      alert('Define un cargo/nombre para la división.');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const payload = {
+        empresaRut,
+        trabajadorRut: rut,
+        cargo: divisionCargo.trim(),
+        parent: parentMap[selectedNode.id] || null,
+      };
+      if (divisionNombre.trim()) payload.nombreTrabajador = divisionNombre.trim();
+      const res = await fetch('http://localhost:5000/api/organigramas/nodos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = null;
+      }
+      if (!res.ok) {
+        const message = data?.message || 'No se pudo crear la división';
+        throw new Error(message);
+      }
+      const nuevoId = data?._id;
+      if (!nuevoId) throw new Error('Respuesta del servidor inválida al crear la división.');
+      await patchNodeParent(selectedNode.id, nuevoId);
+      setShowDivisionModal(false);
+      setDivisionRut('');
+      setDivisionNombre('');
+      setDivisionCargo('');
+    } catch (err) {
+      alert(err.message || 'No se pudo crear la nueva división');
+    } finally {
+      setActionLoading(false);
+    }
   };
   const handleAddWorker = async () => {
     if (!empresaRut || !newRut || !newCargo) return;
@@ -299,115 +670,141 @@ const Organigrama = () => {
       </h1>
 
       {!empresaRut && empresas.length === 0 && (
-        <div className="w-full bg-yellow-100 border-b border-yellow-300 text-yellow-900 p-4 flex items-center gap-3">
-          <span>No tienes empresa seleccionada.</span>
-          {user?.rol === 'admin' ? (
-            <>
-              <input
-                type="text"
-                value={newEmpresa}
-                onChange={(e) => {
-                  const raw = e.target.value.toUpperCase();
-                  const clean = raw.replace(/[^\dK]/g, '');
-                  let body = clean.slice(0, Math.max(0, clean.length - 1));
-                  const dv = clean.slice(-1);
-                  body = body.slice(0, 8);
-                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                  if (dv) formatted = `${formatted}-${dv}`;
-                  setNewEmpresa(formatted);
-                }}
-                placeholder="RUT de la empresa"
-                className="p-2 border rounded"
-                maxLength={12}
-                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
-              />
-              <button
-                onClick={handleAddEmpresa}
-                className="bg-[#FF540C] hover:bg-[#FF6A00] text-white font-semibold py-2 px-4 rounded"
-              >
-                Añadir empresa
-              </button>
-            </>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="text"
-                value={newEmpresa}
-                onChange={(e) => {
-                  const raw = e.target.value.toUpperCase();
-                  const clean = raw.replace(/[^\dK]/g, '');
-                  let body = clean.slice(0, Math.max(0, clean.length - 1));
-                  const dv = clean.slice(-1);
-                  body = body.slice(0, 8);
-                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                  if (dv) formatted = `${formatted}-${dv}`;
-                  setNewEmpresa(formatted);
-                }}
-                placeholder="RUT de la empresa"
-                className="p-2 border rounded"
-                maxLength={12}
-                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
-              />
-              <input
-                type="text"
-                value={newCargo}
-                onChange={(e)=> setNewCargo(e.target.value)}
-                placeholder="Tu cargo propuesto"
-                className="p-2 border rounded"
-              />
-              <button
-                onClick={async ()=>{
-                  if (!validarRutFormato(newEmpresa) || !validarRutDV(newEmpresa)) { alert('RUT inválido'); return; }
-                  if (!newCargo) { alert('Ingresa un cargo'); return; }
-                  try {
-                    const token = localStorage.getItem('token');
-                    const headers = { 'Content-Type': 'application/json' };
-                    if (token) headers['Authorization'] = `Bearer ${token}`;
-                    const resp = await fetch('http://localhost:5000/api/organigramas/solicitudes', {
-                      method: 'POST', headers, body: JSON.stringify({ empresaRut: newEmpresa, cargoPropuesto: newCargo })
-                    });
-                    if (resp.status === 401) {
-                      alert('Tu sesión expiró o es inválida. Inicia sesión nuevamente.');
-                      localStorage.removeItem('token');
-                      localStorage.removeItem('empresaRut');
-                      localStorage.removeItem('empresasRut');
-                      window.location.href = '/login';
-                      return;
-                    }
-                    const data = await resp.json();
-                    if (!resp.ok) throw new Error(data.message || 'No se pudo crear la solicitud');
-                    if (data.autoAprobada) {
-                      // Refrescar empresas del usuario
-                      const token2 = localStorage.getItem('token');
-                      const headers2 = token2 ? { Authorization: `Bearer ${token2}` } : {};
-                      const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers: headers2 });
-                      if (resMis.ok) {
-                        const mis = await resMis.json();
-                        const listaMis = Array.isArray(mis.empresas) ? mis.empresas : [];
+        isEmpresaAdmin ? (
+          <div className="w-full bg-yellow-100 border-b border-yellow-300 text-yellow-900 p-4 flex flex-col gap-3">
+            <p>
+              No tienes empresa seleccionada. Fuiste asignado como administrador del organigrama de{' '}
+              <strong>{empresaAsignada ? formatearRut(empresaAsignada) : 'una empresa pendiente'}</strong>.
+            </p>
+            <button
+              onClick={() => {
+                if (!empresaAsignada) {
+                  alert('Aun no tienes una empresa asignada. Solicitala al administrador principal.');
+                  return;
+                }
+                if (!empresas.some((er) => normalizeRut(er) === normalizeRut(empresaAsignada))) {
+                  const updated = [...empresas, empresaAsignada];
+                  setEmpresas(updated);
+                  localStorage.setItem('empresasRut', JSON.stringify(updated));
+                }
+                setEmpresaRut(empresaAsignada);
+                localStorage.setItem('empresaRut', empresaAsignada);
+              }}
+              className="bg-[#FF540C] hover:bg-[#FF6A00] text-white font-semibold py-2 px-4 rounded max-w-fit"
+            >
+              Cargar mi organigrama
+            </button>
+          </div>
+        ) : (
+          <div className="w-full bg-yellow-100 border-b border-yellow-300 text-yellow-900 p-4 flex items-center gap-3">
+            <span>No tienes empresa seleccionada.</span>
+            {isAdmin ? (
+              <>
+                <input
+                  type="text"
+                  value={newEmpresa}
+                  onChange={(e) => {
+                    const raw = e.target.value.toUpperCase();
+                    const clean = raw.replace(/[^\dK]/g, '');
+                    let body = clean.slice(0, Math.max(0, clean.length - 1));
+                    const dv = clean.slice(-1);
+                    body = body.slice(0, 8);
+                    let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    if (dv) formatted = `${formatted}-${dv}`;
+                    setNewEmpresa(formatted);
+                  }}
+                  placeholder="RUT de la empresa"
+                  className="p-2 border rounded"
+                  maxLength={12}
+                  onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
+                />
+                <button
+                  onClick={handleAddEmpresa}
+                  className="bg-[#FF540C] hover:bg-[#FF6A00] text-white font-semibold py-2 px-4 rounded"
+                >
+                  Anadir empresa
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={newEmpresa}
+                  onChange={(e) => {
+                    const raw = e.target.value.toUpperCase();
+                    const clean = raw.replace(/[^\dK]/g, '');
+                    let body = clean.slice(0, Math.max(0, clean.length - 1));
+                    const dv = clean.slice(-1);
+                    body = body.slice(0, 8);
+                    let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    if (dv) formatted = `${formatted}-${dv}`;
+                    setNewEmpresa(formatted);
+                  }}
+                  placeholder="RUT de la empresa"
+                  className="p-2 border rounded"
+                  maxLength={12}
+                  onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewEmpresa(f); e.target.value=f; }}
+                />
+                <input
+                  type="text"
+                  value={newCargo}
+                  onChange={(e)=> setNewCargo(e.target.value)}
+                  placeholder="Tu cargo propuesto"
+                  className="p-2 border rounded"
+                />
+                <button
+                  onClick={async ()=>{
+                    if (!validarRutFormato(newEmpresa) || !validarRutDV(newEmpresa)) { alert('RUT invalido'); return; }
+                    if (!newCargo) { alert('Ingresa un cargo'); return; }
+                    try {
+                      const token = localStorage.getItem('token');
+                      const headers = { 'Content-Type': 'application/json' };
+                      if (token) headers['Authorization'] = `Bearer ${token}`;
+                      const resp = await fetch('http://localhost:5000/api/organigramas/solicitudes', {
+                        method: 'POST', headers, body: JSON.stringify({ empresaRut: newEmpresa, cargoPropuesto: newCargo })
+                      });
+                      if (resp.status === 401) {
+                        alert('Tu sesion expiro o es invalida. Inicia sesion nuevamente.');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('empresaRut');
+                        localStorage.removeItem('empresasRut');
+                        window.location.href = '/login';
+                        return;
+                      }
+                      const data = await resp.json();
+                      if (!resp.ok) throw new Error(data.message || 'No se pudo crear la solicitud');
+                      if (data.autoAprobada) {
+                        const token2 = localStorage.getItem('token');
+                        const headers2 = token2 ? { Authorization: `Bearer ${token2}` } : {};
+                        const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers: headers2 });
+                        if (resMis.status === 401) {
+                          alert('Tu sesion expiro o es invalida. Inicia sesion nuevamente.');
+                          localStorage.removeItem('token');
+                          localStorage.removeItem('empresaRut');
+                          localStorage.removeItem('empresasRut');
+                          window.location.href = '/login';
+                          return;
+                        }
+                        const dataMis = await resMis.json();
+                        const listaMis = Array.isArray(dataMis.empresas) ? dataMis.empresas : [];
                         setEmpresas(listaMis);
                         localStorage.setItem('empresasRut', JSON.stringify(listaMis));
-                        // seleccionar nueva empresa
-                        const match = listaMis.find(er => normalizeRut(er) === normalizeRut(newEmpresa));
-                        if (match) {
-                          setEmpresaRut(match);
-                          localStorage.setItem('empresaRut', match);
-                        }
                       }
-                      alert('Unido automáticamente como primer miembro');
-                    } else {
-                      alert('Solicitud enviada; espera validación de un miembro.');
+                      alert('Solicitud enviada');
+                    } catch (error) {
+                      alert(error.message || 'No se pudo crear la solicitud');
                     }
-                    setNewEmpresa(''); setNewCargo('');
-                  } catch (e) {
-                    alert(e.message);
-                  }
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
-              >
-                Solicitar unirme
-              </button>
-            </div>
-          )}
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
+                >
+                  Solicitar unirme
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      )}
+
         </div>
       )}
 
@@ -433,7 +830,7 @@ const Organigrama = () => {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            {user?.rol === 'admin' && (
+            {isAdmin && (
               <>
                 <input
                   type="text"
@@ -519,6 +916,10 @@ const Organigrama = () => {
               <button className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(false); }}>Eliminar</button>
               <button className="bg-red-700 hover:bg-red-800 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(true); }}>Eliminar con hijos</button>
               <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); makeSelectedRoot(); }}>Convertir en raíz</button>
+              <button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('reasign'); }}>Reasignar jefe</button>
+              <button className="bg-sky-600 hover:bg-sky-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('equipo'); }}>Mover a otro equipo</button>
+              <button className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('bajar'); }}>Bajar de nivel</button>
+              <button className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1 rounded disabled:opacity-50" disabled={actionLoading} onClick={(e) => { e.stopPropagation(); handlePromoteLevel(); }}>Subir un nivel</button>
               <button
                 className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1 rounded"
                 onClick={(e) => {
@@ -535,6 +936,7 @@ const Organigrama = () => {
               >
                 Denunciar
               </button>
+              <button className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openDivisionModal(); }}>Crear división</button>
             </>
           )}
         </div>
@@ -554,35 +956,58 @@ const Organigrama = () => {
           <div className="absolute inset-0 flex items-center justify-center text-red-600">{error}</div>
         )}
         {!loading && !error && treeData && empresas.some(er => normalizeRut(er) === normalizeRut(empresaRut)) && (
-          <Tree
-            data={treeData}
-            orientation="vertical"
-            pathFunc="diagonal"
-            translate={translate}
-            separation={{ siblings: 1, nonSiblings: 1.2 }}
-            nodeSize={{ x: 240, y: 120 }}
-            zoomable
-            scaleExtent={{ min: 0.6, max: 2 }}
-            transitionDuration={400}
-            renderCustomNodeElement={(rd3tProps) => (
-              <CustomNode
-                {...rd3tProps}
-                onStartDrag={handleStartDrag}
-                onDropOnNode={handleDropOnNode}
-                onSelect={handleSelect}
-                selectedId={selectedNode?.id}
+          <div className="relative w-full h-full">
+            <Tree
+              key={isDragging ? 'dragging-tree' : 'idle-tree'}
+              data={treeData}
+              orientation="vertical"
+              pathFunc="diagonal"
+              translate={translate}
+              separation={{ siblings: 1, nonSiblings: 1.2 }}
+              nodeSize={{ x: 240, y: 120 }}
+              zoomable={!isDragging}
+              scaleExtent={{ min: 0.6, max: 2 }}
+              transitionDuration={400}
+              renderCustomNodeElement={(rd3tProps) => (
+                <CustomNode
+                  {...rd3tProps}
+                  onStartDrag={handleStartDrag}
+                  onHoverTarget={handleHoverTarget}
+                  onHoverEnd={handleHoverLeave}
+                  onSelect={handleSelect}
+                  selectedId={selectedNode?.id}
+                  isDragging={isDragging}
+                  draggingId={draggingId}
+                  dropTargetId={dropTargetNode?.id}
+                />
+              )}
+              styles={{ links: { stroke: linkColor, strokeWidth: 2 } }}
+            />
+            {isDragging && (
+              <div
+                className="absolute inset-0"
+                style={{ cursor: 'grabbing' }}
+                onMouseMove={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragPosition({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseUp={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  finalizeDrag();
+                }}
               />
             )}
-            styles={{ links: { stroke: linkColor, strokeWidth: 2 } }}
-          />
+          </div>
         )}
         {!loading && !error && (!empresaRut || !empresas.some(er => normalizeRut(er) === normalizeRut(empresaRut))) && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-600">No tienes acceso a ninguna empresa o no hay selección.</div>
         )}
 
         {draggingId && (
-          <div className="absolute bottom-2 left-2 bg-yellow-100 border border-yellow-300 text-yellow-900 text-xs px-2 py-1 rounded">
-            Arrastrando nodo... suelta sobre otro para reubicar
+          <div className="absolute bottom-2 left-2 bg-yellow-100 border border-yellow-300 text-yellow-900 text-xs px-2 py-1 rounded shadow">
+            Arrastrando {draggingNode?.name || 'trabajador'} — suelta sobre otro nodo para cambiarlo de equipo (Esc para cancelar)
           </div>
         )}
 
@@ -601,6 +1026,120 @@ const Organigrama = () => {
           <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/mis-denuncias'); }}>Mis denuncias</button>
         </div>
       </div>
+      {isDragging && draggingNode && dragPosition && (
+        <div
+          className="fixed z-50 pointer-events-none px-3 py-2 rounded-lg shadow-lg bg-[#0D0A4F] text-white text-xs"
+          style={{ left: `${dragPosition.x + 12}px`, top: `${dragPosition.y + 12}px` }}
+        >
+          <div className="font-semibold">{draggingNode.name}</div>
+          {draggingNode.attributes?.title && (
+            <div className="opacity-80 text-[10px]">{draggingNode.attributes.title}</div>
+          )}
+          <div className="opacity-70 text-[10px] mt-1">Arrastra y suelta para reubicar</div>
+        </div>
+      )}
+      {showMoveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeMoveModal}>
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">{moveModalTitle}</h3>
+              <button className="text-gray-500 hover:text-gray-700" onClick={closeMoveModal}>✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-600">
+                Selecciona el nuevo jefe para <span className="font-semibold">{selectedNode?.name}</span>. Sólo se muestran cargos válidos para evitar ciclos.
+              </p>
+              <input
+                type="text"
+                value={moveSearch}
+                onChange={(e) => setMoveSearch(e.target.value)}
+                placeholder="Buscar por cargo o RUT"
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+              <select
+                className="w-full border rounded px-3 py-2 text-sm"
+                value={moveTargetId}
+                onChange={(e) => setMoveTargetId(e.target.value)}
+              >
+                <option value="">Selecciona el nuevo jefe</option>
+                {moveOptionsFiltered.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}{opt.subtitle ? ` — ${opt.subtitle}` : ''}
+                  </option>
+                ))}
+              </select>
+              {moveOptionsFiltered.length === 0 && (
+                <div className="text-xs text-rose-500">No hay destinos disponibles para esta operación.</div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t">
+              <button className="px-4 py-2 text-sm rounded border" onClick={closeMoveModal}>
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded bg-indigo-600 text-white disabled:opacity-50"
+                onClick={handleConfirmMove}
+                disabled={!moveTargetId || actionLoading}
+              >
+                {actionLoading ? 'Aplicando...' : 'Confirmar movimiento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDivisionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { if (!actionLoading) setShowDivisionModal(false); }}>
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Crear nueva división para {selectedNode?.name}</h3>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => { if (!actionLoading) setShowDivisionModal(false); }}>✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-600">
+                Se creará un nuevo nodo al mismo nivel que <strong>{selectedNode?.name}</strong> y luego se moverá este trabajador dentro de esa división.
+              </p>
+              <input
+                type="text"
+                value={divisionRut}
+                onChange={(e) => setDivisionRut(e.target.value.toUpperCase())}
+                onBlur={(e) => { const formatted = formatearRut(e.target.value); setDivisionRut(formatted); e.target.value = formatted; }}
+                placeholder="RUT del responsable de la división"
+                className="w-full border rounded px-3 py-2 text-sm"
+                maxLength={12}
+              />
+              <input
+                type="text"
+                value={divisionNombre}
+                onChange={(e) => setDivisionNombre(e.target.value)}
+                placeholder="Nombre del responsable (opcional)"
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                value={divisionCargo}
+                onChange={(e) => setDivisionCargo(e.target.value)}
+                placeholder="Cargo / nombre de la división"
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+              <div className="text-xs text-gray-500">
+                El nuevo nodo se insertará por encima del trabajador seleccionado para generar un nivel adicional en la jerarquía.
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t">
+              <button className="px-4 py-2 text-sm rounded border" onClick={() => { if (!actionLoading) setShowDivisionModal(false); }}>
+                Cancelar
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded bg-teal-600 text-white disabled:opacity-50"
+                onClick={handleCreateDivision}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Creando...' : 'Crear división'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

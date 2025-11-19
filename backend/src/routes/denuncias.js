@@ -1,6 +1,6 @@
 // Rutas REST para denuncias
 import express from "express";
-import { crearDenuncia, listarDenuncias, actualizarEstadoDenuncia, obtenerDenuncia, listarMisDenuncias } from "../controllers/denunciasController.js";
+import { crearDenuncia, listarDenuncias, actualizarEstadoDenuncia, obtenerDenuncia, listarMisDenuncias, estadisticasDenuncias } from "../controllers/denunciasController.js";
 import { protegerRuta } from "../middlewares/authMiddleware.js";
 import uploadEvidencias from "../middlewares/uploadEvidencias.js";
 import optionalAuth from "../middlewares/optionalAuth.js";
@@ -12,6 +12,9 @@ router.post("/", optionalAuth, uploadEvidencias.array('evidencias', 10), crearDe
 
 // Listar denuncias (opcional ?empresaRut=...)
 router.get("/", listarDenuncias);
+
+// Estadísticas generales
+router.get("/estadisticas/general", estadisticasDenuncias);
 
 // Mis denuncias (requiere auth) - declarar ANTES de la ruta ":id"
 router.get("/mias/list", protegerRuta, listarMisDenuncias);

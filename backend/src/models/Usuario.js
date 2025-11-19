@@ -13,7 +13,12 @@ const usuarioSchema = new mongoose.Schema({
   sexo: { type: String, required: true },
   telefono: { type: String, required: true },
   password: { type: String, required: true },
-  rol: { type: String, enum: ["admin", "usuario"], default: "usuario" },
+  rol: { type: String, enum: ["admin", "admin_empresa", "usuario"], default: "usuario" },
+  empresaAdministra: {
+    type: String,
+    default: null,
+    set: (value) => (value ? value.toString().trim().toUpperCase() : null),
+  },
 });
 
 usuarioSchema.pre("save", async function (next) {

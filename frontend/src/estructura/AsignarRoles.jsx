@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatearRut, validarRutFormato, validarRutDV } from "../utils/cl-regiones-comunas";
 
 function AsignarRoles() {
   const [usuarios, setUsuarios] = useState([]);
@@ -21,11 +22,11 @@ function AsignarRoles() {
       });
   }, []);
 
-  const actualizarRol = (id, nuevoRol) => {
+  const actualizarRol = (id, nuevoRol, empresaAsignada = null) => {
     fetch(`http://localhost:5000/api/actualizar-rol/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rol: nuevoRol }),
+      body: JSON.stringify({ rol: nuevoRol, empresaAdministra: empresaAsignada }),
     })
       .then((res) => {
         if (!res.ok) {
@@ -39,7 +40,9 @@ function AsignarRoles() {
         alert(data.message);
         setUsuarios((prev) =>
           prev.map((usuario) =>
-            usuario._id === id ? { ...usuario, rol: nuevoRol } : usuario
+            usuario._id === id
+              ? { ...usuario, rol: nuevoRol, empresaAdministra: empresaAsignada }
+              : usuario
           )
         );
       })
@@ -47,6 +50,36 @@ function AsignarRoles() {
         console.error(err);
         alert(err.message);
       });
+  };
+
+  const solicitarRutEmpresa = (valorInicial = "") => {
+    const entrada = window.prompt(
+      "Ingresa el RUT de la empresa (formato 12.345.678-5)",
+      valorInicial || ""
+    );
+    if (!entrada) return null;
+    const formateado = formatearRut(entrada.trim());
+    if (!validarRutFormato(formateado) || !validarRutDV(formateado)) {
+      alert("RUT de empresa invalido. Usa el formato 12.345.678-5");
+      return null;
+    }
+    return formateado;
+  };
+
+  const handleCambioRol = (usuario, nuevoRol) => {
+    if (nuevoRol === "admin_empresa") {
+      const rut = solicitarRutEmpresa(usuario.empresaAdministra || "");
+      if (!rut) return;
+      actualizarRol(usuario._id, nuevoRol, rut);
+    } else {
+      actualizarRol(usuario._id, nuevoRol, null);
+    }
+  };
+
+  const handleActualizarEmpresa = (usuario) => {
+    const rut = solicitarRutEmpresa(usuario.empresaAdministra || "");
+    if (!rut) return;
+    actualizarRol(usuario._id, "admin_empresa", rut);
   };
 
   const usuariosFiltrados = usuarios.filter((usuario) => {
@@ -91,6 +124,7 @@ function AsignarRoles() {
             <option value="todos">Todos los roles</option>
             <option value="usuario">Usuario</option>
             <option value="admin">Administrador</option>
+            <option value="admin_empresa">Admin organigrama</option>
           </select>
         </div>
 
@@ -100,6 +134,7 @@ function AsignarRoles() {
               <th className="border border-gray-300 px-4 py-2 text-left">Nombre</th>
               <th className="border border-gray-300 px-4 py-2 text-left">Correo</th>
               <th className="border border-gray-300 px-4 py-2 text-left">Rol Actual</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">Empresa asignada</th>
               <th className="border border-gray-300 px-4 py-2 text-left">Acciones</th>
             </tr>
           </thead>
@@ -110,13 +145,25 @@ function AsignarRoles() {
                 <td className="border border-gray-300 px-4 py-2">{usuario.email}</td>
                 <td className="border border-gray-300 px-4 py-2">{usuario.rol}</td>
                 <td className="border border-gray-300 px-4 py-2">
+                  {usuario.empresaAdministra ? formatearRut(usuario.empresaAdministra) : "—"}
+                  {usuario.rol === "admin_empresa" && (
+                    <button
+                      onClick={() => handleActualizarEmpresa(usuario)}
+                      className="ml-2 text-sm text-blue-600 hover:underline"
+                    >
+                      {usuario.empresaAdministra ? "Cambiar" : "Asignar"}
+                    </button>
+                  )}
+                </td>
+                <td className="border border-gray-300 px-4 py-2">
                   <select
                     value={usuario.rol}
-                    onChange={(e) => actualizarRol(usuario._id, e.target.value)}
+                    onChange={(e) => handleCambioRol(usuario, e.target.value)}
                     className="border border-gray-300 p-1 rounded w-36"
                   >
                     <option value="usuario">Usuario</option>
                     <option value="admin">Administrador</option>
+                    <option value="admin_empresa">Admin organigrama</option>
                   </select>
                 </td>
               </tr>

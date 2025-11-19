@@ -41,12 +41,20 @@ const Home = () => {
               </a>
             </>
           ) : (
-            <a
-              href="/organigrama"
-              className="px-6 py-3 rounded-2xl bg-green-600 text-white hover:bg-green-500 transition"
-            >
-              Ir al Organigrama
-            </a>
+            <>
+              <a
+                href="/organigrama"
+                className="px-6 py-3 rounded-2xl bg-green-600 text-white hover:bg-green-500 transition"
+              >
+                Ir al Organigrama
+              </a>
+              <a
+                href="/denunciar"
+                className="px-6 py-3 rounded-2xl bg-red-600 text-white hover:bg-red-500 transition"
+              >
+                Denuncia Rápida
+              </a>
+            </>
           )}
         </div>
       </main>

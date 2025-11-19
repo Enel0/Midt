@@ -17,11 +17,11 @@ const Denunciar = () => {
   const { user } = useContext(UserContext);
   const q = useQuery();
 
-  const empresaRut = q.empresaRut || '';
+  const [empresaRut, setEmpresaRut] = useState(q.empresaRut || '');
   const nodoId = q.nodoId || '';
-  const trabajadorRut = q.trabajadorRut || '';
-  const nombreTrabajador = q.nombreTrabajador || '';
-  const cargo = q.cargo || '';
+  const [trabajadorRut, setTrabajadorRut] = useState(q.trabajadorRut || '');
+  const [nombreTrabajador, setNombreTrabajador] = useState(q.nombreTrabajador || '');
+  const [cargo, setCargo] = useState(q.cargo || '');
 
   // Opciones predefinidas de tipos de denuncia
   const tiposOpciones = [
@@ -57,7 +57,7 @@ const Denunciar = () => {
     const motivo = tiposSeleccionados.join(', ');
 
     // Validaciones mínimas en frontend
-    if (!empresaRut) { setError('La empresa es obligatoria'); return; }
+    if (!empresaRut.trim()) { setError('La empresa es obligatoria'); return; }
     if (tiposSeleccionados.length === 0) { setError('Selecciona al menos un tipo de denuncia o completa "Otras"'); return; }
     if (!detalle.trim()) { setError('La descripción detallada es obligatoria'); return; }
     if (!declaraVeracidad || !autorizaDatosPersonales) { setError('Debes aceptar las declaraciones de consentimiento'); return; }
@@ -65,16 +65,13 @@ const Denunciar = () => {
       setSending(true);
       // Construir FormData para soportar archivos adjuntos
       const form = new FormData();
-      form.append('empresaRut', empresaRut);
+      form.append('empresaRut', empresaRut.trim());
       form.append('motivo', motivo);
       form.append('detalle', detalle);
-      // Si la denuncia viene desde un nodo del organigrama, incluir datos del trabajador
-      if (nodoId) {
-        form.append('nodoId', nodoId);
-        form.append('trabajadorRut', trabajadorRut);
-        form.append('nombreTrabajador', nombreTrabajador);
-        form.append('cargo', cargo);
-      }
+      form.append('trabajadorRut', trabajadorRut);
+      form.append('nombreTrabajador', nombreTrabajador);
+      form.append('cargo', cargo);
+      if (nodoId) form.append('nodoId', nodoId);
       form.append('tipos', JSON.stringify(tiposSeleccionados));
       form.append('tipoOtro', tipoOtro);
       form.append('fechaOPeriodo', fechaOPeriodo);
@@ -110,19 +107,53 @@ const Denunciar = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto bg-white rounded shadow p-6">
         <h1 className="text-2xl font-bold mb-4">Formulario de Denuncia</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <h3 className="font-semibold mb-1">Demandante</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="space-y-1">
+            <h3 className="font-semibold">Demandante</h3>
             <div className="text-sm text-gray-700">{user ? `${user.nombre || ''} (${user.email || ''})` : 'No autenticado'}</div>
           </div>
+          <div className="space-y-1">
+            <label htmlFor="empresaRut" className="font-semibold text-sm">Empresa</label>
+            <input
+              id="empresaRut"
+              className="w-full border rounded p-2 text-sm"
+              value={empresaRut}
+              onChange={(e) => setEmpresaRut(e.target.value)}
+              placeholder="RUT o nombre de la empresa"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
-            <h3 className="font-semibold mb-1">Denunciado</h3>
-            <div className="text-sm text-gray-700">{nombreTrabajador || trabajadorRut || '-'}</div>
-            {cargo && <div className="text-xs text-gray-500">Cargo: {cargo}</div>}
+            <label htmlFor="nombreDenunciado" className="font-semibold text-sm block mb-1">Nombre denunciado</label>
+            <input
+              id="nombreDenunciado"
+              className="w-full border rounded p-2 text-sm"
+              value={nombreTrabajador}
+              onChange={(e) => setNombreTrabajador(e.target.value)}
+              placeholder="Nombre completo (opcional)"
+            />
           </div>
           <div>
-            <h3 className="font-semibold mb-1">Empresa</h3>
-            <div className="text-sm text-gray-700">{empresaRut || '-'}</div>
+            <label htmlFor="rutDenunciado" className="font-semibold text-sm block mb-1">RUT denunciado</label>
+            <input
+              id="rutDenunciado"
+              className="w-full border rounded p-2 text-sm"
+              value={trabajadorRut}
+              onChange={(e) => setTrabajadorRut(e.target.value)}
+              placeholder="11.111.111-1"
+            />
+          </div>
+          <div>
+            <label htmlFor="cargoDenunciado" className="font-semibold text-sm block mb-1">Cargo denunciado</label>
+            <input
+              id="cargoDenunciado"
+              className="w-full border rounded p-2 text-sm"
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Cargo o rol (opcional)"
+            />
           </div>
         </div>
 
