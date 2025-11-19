@@ -35,7 +35,7 @@ function LoginForm() {
       const { token, user } = await response.json();
       localStorage.setItem("token", token);
       login(user);
-      navigate("/organigrama");
+      navigate("/");
     } catch (error) {
       setErrorMessage(error.message || "Error al iniciar sesión.");
     } finally {

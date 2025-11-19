@@ -805,9 +805,6 @@ const Organigrama = () => {
         )
       )}
 
-        </div>
-      )}
-
       {(empresaRut || empresas.length > 0) && (
         <div className="w-full bg-blue-50 text-blue-900 px-4 py-2 text-sm flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
