@@ -76,6 +76,7 @@ const CustomNode = ({
 };
 
 const Organigrama = () => {
+  const MENU_OFFSET_PX = 72;
   const { darkMode } = useContext(UserContext);
   const containerRef = useRef(null);
   const [translate, setTranslate] = useState({ x: 400, y: 80 });
@@ -94,7 +95,6 @@ const Organigrama = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
-  const [moveContext, setMoveContext] = useState('reasign');
   const [moveTargetId, setMoveTargetId] = useState('');
   const [moveSearch, setMoveSearch] = useState('');
   const [showDivisionModal, setShowDivisionModal] = useState(false);
@@ -102,7 +102,7 @@ const Organigrama = () => {
   const [divisionNombre, setDivisionNombre] = useState('');
   const [divisionCargo, setDivisionCargo] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const { user } = useContext(UserContext);
+  const { user, logout } = useContext(UserContext);
   const isAdmin = user?.rol === 'admin';
   const isEmpresaAdmin = user?.rol === 'admin_empresa';
   const empresaAsignada = user?.empresaAdministra || '';
@@ -122,6 +122,15 @@ const Organigrama = () => {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = () => setMenuOpen((prev) => !prev);
+    window.addEventListener('toggleOrganigramaMenu', handler);
+    return () => {
+      window.removeEventListener('toggleOrganigramaMenu', handler);
+    };
+  }, []);
 
   useEffect(() => {
     const recalc = () => {
@@ -283,16 +292,7 @@ const Organigrama = () => {
     return flatNodes.filter((entry) => !excludedMoveIds.has(entry.id));
   }, [flatNodes, excludedMoveIds]);
 
-  const moveModalTitle = useMemo(() => {
-    switch (moveContext) {
-      case 'equipo':
-        return 'Mover a otro equipo';
-      case 'bajar':
-        return 'Bajar a un nuevo nivel';
-      default:
-        return 'Reasignar jefe directo';
-    }
-  }, [moveContext]);
+  const moveModalTitle = 'Reasignar jefe directo';
 
   const moveOptionsFiltered = useMemo(() => {
     const term = moveSearch.trim().toLowerCase();
@@ -488,12 +488,11 @@ const Organigrama = () => {
     await refreshTree();
   }, [refreshTree]);
 
-  const openMoveModal = (context = 'reasign') => {
+  const openMoveModal = () => {
     if (!selectedNode?.id) {
       alert('Selecciona un nodo primero.');
       return;
     }
-    setMoveContext(context);
     setMoveSearch('');
     setMoveTargetId('');
     setShowMoveModal(true);
@@ -665,9 +664,11 @@ const Organigrama = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <h1 className="text-center text-4xl font-bold text-[#0D0A4F] dark:text-white mt-6 mb-4">
-        Organigrama
-      </h1>
+      <div className="px-4 mt-6 mb-4 flex flex-col items-center">
+        <h1 className="text-4xl font-bold text-center w-full text-[#0D0A4F] dark:text-white mb-2">
+          Organigrama
+        </h1>
+      </div>
 
       {!empresaRut && empresas.length === 0 && (
         isEmpresaAdmin ? (
@@ -805,138 +806,158 @@ const Organigrama = () => {
         )
       )}
 
-      {(empresaRut || empresas.length > 0) && (
-        <div className="w-full bg-blue-50 text-blue-900 px-4 py-2 text-sm flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span>Empresa:</span>
-            <select
-              className="border rounded p-1"
-              value={empresaRut}
-              onChange={(e) => handleChangeEmpresa(e.target.value)}
-            >
-              <option value="">-- Seleccionar --</option>
-              {empresas.map((er) => (
-                <option key={er} value={er}>{formatearRut(er)}</option>
-              ))}
-            </select>
-            <button
-              className="text-blue-600 underline"
-              onClick={() => { localStorage.removeItem('empresaRut'); setEmpresaRut(''); }}
-            >
-              Limpiar selección
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && (
-              <>
-                <input
-                  type="text"
-                  value={newEmpresa}
-                  onChange={(e) => {
-                    const raw = e.target.value.toUpperCase();
-                    // formateo básico: solo números y K, agregar guión final
-                    const clean = raw.replace(/[^\dK]/g, '');
-                    let body = clean.slice(0, Math.max(0, clean.length - 1));
-                    const dv = clean.slice(-1);
-                    body = body.slice(0, 8);
-                    let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                    if (dv) formatted = `${formatted}-${dv}`;
-                    setNewEmpresa(formatted);
-                  }}
-                  placeholder="Agregar nuevo RUT"
-                  className="p-1 border rounded"
-                  onBlur={(e)=>{ e.target.value = formatearRut(e.target.value); setNewEmpresa(e.target.value); }}
-                  maxLength={12}
-                />
-                <button
-                  onClick={handleAddEmpresa}
-                  className="bg-[#FF540C] hover:bg-[#FF6A00] text-white text-sm font-semibold py-1 px-3 rounded"
-                >
-                  Añadir
-                </button>
-              </>
+      {(isAdmin || empresas.length > 0 || empresaRut) && (
+        <section className="w-full px-4 pb-4">
+          <div className={`grid gap-4 ${empresaRut ? 'lg:[grid-template-columns:0.95fr_1.05fr]' : ''}`}>
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-900/70 shadow-sm p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+                {isAdmin && (
+                  <div className="flex-1 lg:max-w-sm">
+                    <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                      RUT de empresa nueva
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        type="text"
+                        value={newEmpresa}
+                        onChange={(e) => {
+                          const raw = e.target.value.toUpperCase();
+                          const clean = raw.replace(/[^\dK]/g, '');
+                          let body = clean.slice(0, Math.max(0, clean.length - 1));
+                          const dv = clean.slice(-1);
+                          body = body.slice(0, 8);
+                          let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                          if (dv) formatted = `${formatted}-${dv}`;
+                          setNewEmpresa(formatted);
+                        }}
+                        placeholder="12.345.678-9"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
+                        onBlur={(e)=>{ e.target.value = formatearRut(e.target.value); setNewEmpresa(e.target.value); }}
+                        maxLength={12}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddEmpresa}
+                        className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-white bg-[#FF540C] hover:bg-[#FF6A00] shadow-sm transition-colors"
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-w-[220px]">
+                  <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                    Seleccionar empresa
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <select
+                      className="flex-1 min-w-[160px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={empresaRut}
+                      onChange={(e) => handleChangeEmpresa(e.target.value)}
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {empresas.map((er) => (
+                        <option key={er} value={er}>{formatearRut(er)}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 disabled:text-slate-200 px-4 py-2 rounded-xl transition"
+                      disabled={!empresaRut}
+                      onClick={() => { localStorage.removeItem('empresaRut'); setEmpresaRut(''); }}
+                    >
+                      Limpiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {empresaRut && (
+              <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-white/90 dark:bg-slate-900/70 shadow-sm p-4 flex flex-col gap-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                      RUT del trabajador
+                    </label>
+                    <input
+                      type="text"
+                      value={newRut}
+                      onChange={(e) => {
+                        const raw = e.target.value.toUpperCase();
+                        const clean = raw.replace(/[^\dK]/g, '');
+                        let body = clean.slice(0, Math.max(0, clean.length - 1));
+                        const dv = clean.slice(-1);
+                        body = body.slice(0, 8);
+                        let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        if (dv) formatted = `${formatted}-${dv}`;
+                        setNewRut(formatted);
+                      }}
+                      placeholder="12.345.678-9"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      maxLength={12}
+                      onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewRut(f); e.target.value=f; }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                      Cargo
+                    </label>
+                    <input
+                      type="text"
+                      value={newCargo}
+                      onChange={(e) => setNewCargo(e.target.value)}
+                      placeholder="Ej: Gerente de operaciones"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="w-full md:w-auto inline-flex items-center justify-center px-5 py-2 rounded-xl font-semibold text-white bg-[#FF540C] hover:bg-[#FF6A00] shadow-sm transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleAddWorker(); }}
+                  >
+                    Agregar trabajador
+                  </button>
+                </div>
+              </div>
             )}
-            <button
-              className="ml-2 px-3 py-1 border rounded hover:bg-blue-100"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="menu"
-              title="Menú"
-            >
-              ☰
-            </button>
           </div>
-        </div>
+        </section>
       )}
-
-      {/* Barra de controles: izquierda (añadir trabajador), derecha (acciones del nodo) */}
-      <div className="w-full px-4 py-2 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          {empresaRut && (
-            <>
-              <input
-                type="text"
-                value={newRut}
-                onChange={(e) => {
-                  const raw = e.target.value.toUpperCase();
-                  const clean = raw.replace(/[^\dK]/g, '');
-                  let body = clean.slice(0, Math.max(0, clean.length - 1));
-                  const dv = clean.slice(-1);
-                  body = body.slice(0, 8);
-                  let formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                  if (dv) formatted = `${formatted}-${dv}`;
-                  setNewRut(formatted);
-                }}
-                placeholder="RUT trabajador"
-                className="p-1 border rounded text-sm"
-                maxLength={12}
-                onBlur={(e)=>{ const f = formatearRut(e.target.value); setNewRut(f); e.target.value=f; }}
-              />
-              <input
-                type="text"
-                value={newCargo}
-                onChange={(e) => setNewCargo(e.target.value)}
-                placeholder="Cargo"
-                className="p-1 border rounded text-sm"
-              />
-              <button
-                className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-1 px-2 rounded"
-                onClick={(e) => { e.stopPropagation(); handleAddWorker(); }}
-              >
-                Añadir trabajador {selectedNode ? '(hijo del seleccionado)' : '(raíz)'}
-              </button>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {selectedNode && (
-            <>
-              <button className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(false); }}>Eliminar</button>
-              <button className="bg-red-700 hover:bg-red-800 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(true); }}>Eliminar con hijos</button>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); makeSelectedRoot(); }}>Convertir en raíz</button>
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('reasign'); }}>Reasignar jefe</button>
-              <button className="bg-sky-600 hover:bg-sky-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('equipo'); }}>Mover a otro equipo</button>
-              <button className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal('bajar'); }}>Bajar de nivel</button>
-              <button className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1 rounded disabled:opacity-50" disabled={actionLoading} onClick={(e) => { e.stopPropagation(); handlePromoteLevel(); }}>Subir un nivel</button>
-              <button
-                className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1 rounded"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const params = new URLSearchParams({ empresaRut: empresaRut || '' });
-                  if (selectedNode?.id) {
-                    params.set('nodoId', selectedNode.id);
-                    if (selectedNode.trabajadorRut) params.set('trabajadorRut', selectedNode.trabajadorRut);
-                    if (selectedNode.nombreTrabajador) params.set('nombreTrabajador', selectedNode.nombreTrabajador);
-                    if (selectedNode.name) params.set('cargo', selectedNode.name);
+      {/* Acciones sobre el nodo seleccionado */}
+      <div className="w-full px-4 pb-2 flex items-center justify-end gap-2 flex-wrap">
+        {selectedNode && (
+          <>
+            <button className="bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(false); }}>Eliminar</button>
+            <button className="bg-red-700 hover:bg-red-800 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); deleteSelected(true); }}>Eliminar nodo y equipo</button>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); makeSelectedRoot(); }}>Mover al nivel superior</button>
+            <button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openMoveModal(); }}>Reasignar jefe</button>
+            <button className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1 rounded disabled:opacity-50" disabled={actionLoading} onClick={(e) => { e.stopPropagation(); handlePromoteLevel(); }}>Subir un nivel</button>
+            <button
+              className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                const params = new URLSearchParams({ empresaRut: empresaRut || '' });
+                if (selectedNode?.id) {
+                  params.set('nodoId', selectedNode.id);
+                  if (selectedNode.trabajadorRut) params.set('trabajadorRut', selectedNode.trabajadorRut);
+                  const nombreDesdeTitulo = selectedNode.attributes?.title;
+                  const nombreAuto = selectedNode.nombreTrabajador
+                    || (nombreDesdeTitulo && nombreDesdeTitulo !== selectedNode.trabajadorRut
+                      ? nombreDesdeTitulo
+                      : '');
+                  if (typeof nombreAuto === 'string' && nombreAuto.trim()) {
+                    params.set('nombreTrabajador', nombreAuto.trim());
                   }
-                  navigate(`/denunciar?${params.toString()}`);
-                }}
-              >
-                Denunciar
-              </button>
-              <button className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openDivisionModal(); }}>Crear división</button>
-            </>
-          )}
-        </div>
+                  if (selectedNode.name) params.set('cargo', selectedNode.name);
+                }
+                navigate(`/denunciar?${params.toString()}`);
+              }}
+            >
+              Denunciar
+            </button>
+            <button className="bg-teal-600 hover:bg-teal-700 text-white text-xs px-2 py-1 rounded" onClick={(e) => { e.stopPropagation(); openDivisionModal(); }}>Crear division</button>
+          </>
+        )}
       </div>
 
       <div
@@ -1013,7 +1034,10 @@ const Organigrama = () => {
       </div>
 
       {/* Drawer deslizante de menú */}
-      <div className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg border-l transform transition-transform duration-300 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        className={`fixed right-0 w-64 bg-white shadow-lg border-l transform transition-transform duration-300 ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ top: `${MENU_OFFSET_PX}px`, height: `calc(100% - ${MENU_OFFSET_PX}px)` }}
+      >
         <div className="p-4 border-b flex items-center justify-between">
           <span className="font-semibold">Menú</span>
           <button className="text-gray-600" onClick={() => setMenuOpen(false)}>✕</button>
@@ -1021,6 +1045,16 @@ const Organigrama = () => {
         <div className="p-4 flex flex-col gap-2">
           <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/perfil'); }}>Ver perfil</button>
           <button className="text-left px-3 py-2 rounded hover:bg-gray-100" onClick={() => { setMenuOpen(false); navigate('/mis-denuncias'); }}>Mis denuncias</button>
+          <button
+            className="text-left px-3 py-2 rounded hover:bg-gray-100 text-red-600"
+            onClick={() => {
+              setMenuOpen(false);
+              logout();
+              navigate('/login');
+            }}
+          >
+            Cerrar sesión
+          </button>
         </div>
       </div>
       {isDragging && draggingNode && dragPosition && (
