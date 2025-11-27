@@ -8,6 +8,7 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const isOrganigrama = location.pathname.startsWith("/organigrama");
+  const hideThemeToggle = ["/", "/login", "/registro"].includes(location.pathname);
 
   const handleOrganigramaMenu = () => {
     window.dispatchEvent(new CustomEvent("toggleOrganigramaMenu"));
@@ -32,15 +33,17 @@ function Navbar() {
 
       <div className="flex items-center space-x-4">
         {/* Botón modo oscuro/claro */}
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="flex items-center gap-1 text-sm font-medium 
-                     bg-[#0D0A4F] hover:bg-[#1a1668] text-white 
-                     px-3 py-1 rounded-full border border-white"
-        >
-          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          {darkMode ? "Claro" : "Oscuro"}
-        </button>
+        {!hideThemeToggle && (
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="flex items-center gap-1 text-sm font-medium 
+                       bg-[#0D0A4F] hover:bg-[#1a1668] text-white 
+                       px-3 py-1 rounded-full border border-white"
+          >
+            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            {darkMode ? "Claro" : "Oscuro"}
+          </button>
+        )}
 
         {user ? (
           <>
