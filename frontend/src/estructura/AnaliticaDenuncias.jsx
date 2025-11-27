@@ -2,25 +2,7 @@
 import jsPDF from "jspdf";
 import { UserContext } from "../context/UserContext";
 import { buildApiUrl } from "../utils/api";
-
-const regionesChile = [
-  "Arica y Parinacota",
-  "Tarapacá",
-  "Antofagasta",
-  "Atacama",
-  "Coquimbo",
-  "Valparaíso",
-  "Metropolitana de Santiago",
-  "Libertador General Bernardo O'Higgins",
-  "Maule",
-  "Ñuble",
-  "Biobío",
-  "La Araucanía",
-  "Los Ríos",
-  "Los Lagos",
-  "Aysén del General Carlos Ibáñez del Campo",
-  "Magallanes y la Antártica Chilena",
-];
+import { regiones as regionesChile, comunasByRegion } from "../utils/cl-regiones-comunas";
 
 const StatCard = ({ title, value, helper, darkMode }) => (
   <div
@@ -75,7 +57,8 @@ function AnaliticaDenuncias() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filtros, setFiltros] = useState({ desde: "", hasta: "", region: "" });
+  const [filtros, setFiltros] = useState({ desde: "", hasta: "", region: "", comuna: "" });
+  const comunasFiltro = useMemo(() => comunasByRegion(filtros.region), [filtros.region]);
 
   const fetchStats = async () => {
     try {
@@ -85,6 +68,7 @@ function AnaliticaDenuncias() {
       if (filtros.desde) params.set("desde", filtros.desde);
       if (filtros.hasta) params.set("hasta", filtros.hasta);
       if (filtros.region) params.set("region", filtros.region);
+      if (filtros.comuna) params.set("comuna", filtros.comuna);
       const endpoint = "/api/denuncias/estadisticas/general";
       const query = params.toString();
       const url = buildApiUrl(query ? `${endpoint}?${query}` : endpoint);
@@ -120,6 +104,7 @@ function AnaliticaDenuncias() {
       `Desde: ${filtros.desde || "Sin definir"}`,
       `Hasta: ${filtros.hasta || "Sin definir"}`,
       `Región: ${filtros.region || "Todas"}`,
+      `Comuna: ${filtros.comuna || "Todas"}`,
     ];
     filtrosTexto.forEach((linea, idx) => {
       doc.text(linea, 14, 30 + idx * 6);
@@ -156,6 +141,24 @@ function AnaliticaDenuncias() {
       });
     }
 
+    const comunasTop = (stats.porComuna || []).slice(0, 12);
+    let comunasStart = regionesStart + Math.min(regionesTop.length, 12) * 6 + 8;
+    if (comunasStart > 270) comunasStart = 270;
+    doc.setFontSize(12);
+    doc.text("Casos por comuna", 14, comunasStart);
+    doc.setFontSize(11);
+    comunasStart += 6;
+    if (comunasTop.length === 0) {
+      doc.text("Sin información de comunas.", 14, comunasStart);
+    } else {
+      comunasTop.forEach((comuna, idx) => {
+        const y = comunasStart + idx * 6;
+        if (y < 285) {
+          doc.text(`${idx + 1}. ${comuna.comuna}: ${comuna.total}`, 14, y);
+        }
+      });
+    }
+
     doc.save("analitica-denuncias.pdf");
   };
 
@@ -174,7 +177,7 @@ function AnaliticaDenuncias() {
             </p>
           </div>
           <form
-            className="flex flex-col md:flex-row gap-4"
+            className="flex flex-col md:flex-row md:flex-wrap gap-4"
             onSubmit={(e) => {
               e.preventDefault();
               fetchStats();
@@ -218,12 +221,36 @@ function AnaliticaDenuncias() {
                   darkMode ? "bg-white/10 border-white/20 text-white" : "bg-white border-gray-300"
                 }`}
                 value={filtros.region}
-                onChange={(e) => setFiltros((prev) => ({ ...prev, region: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFiltros((prev) => ({ ...prev, region: value, comuna: "" }));
+                }}
               >
                 <option value="">Todas las regiones</option>
                 {regionesChile.map((region) => (
                   <option key={region} value={region}>
                     {region}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={`flex flex-col text-sm ${darkMode ? "text-white/70" : "text-gray-600"}`}>
+              <label className="font-medium mb-1" htmlFor="comuna">
+                Comuna
+              </label>
+              <select
+                id="comuna"
+                className={`border rounded px-3 py-2 ${
+                  darkMode ? "bg-white/10 border-white/20 text-white" : "bg-white border-gray-300"
+                }`}
+                value={filtros.comuna}
+                onChange={(e) => setFiltros((prev) => ({ ...prev, comuna: e.target.value }))}
+                disabled={!filtros.region}
+              >
+                <option value="">{filtros.region ? "Todas las comunas" : "Selecciona región"}</option>
+                {comunasFiltro.map((comuna) => (
+                  <option key={comuna} value={comuna}>
+                    {comuna}
                   </option>
                 ))}
               </select>
@@ -260,7 +287,7 @@ function AnaliticaDenuncias() {
               <StatCard
                 title="Regiones con casos"
                 value={stats.porRegion?.length || 0}
-                helper="Considerando información del trabajador denunciado"
+                helper="Según región reportada en el formulario"
                 darkMode={darkMode}
               />
               <StatCard
@@ -281,14 +308,14 @@ function AnaliticaDenuncias() {
                 title="Casos por región"
                 items={stats.porRegion || []}
                 labelKey="region"
-                emptyLabel="Aún no hay datos de región asociados a los denunciados."
+                emptyLabel="Aún no hay región informada en las denuncias."
                 darkMode={darkMode}
               />
               <BarList
-                title="Motivos más frecuentes"
-                items={stats.topMotivos || []}
-                labelKey="motivo"
-                emptyLabel="Aún no hay motivos clasificados."
+                title="Casos por comuna"
+                items={stats.porComuna || []}
+                labelKey="comuna"
+                emptyLabel="Aún no se han asociado comunas a los hechos."
                 darkMode={darkMode}
               />
             </section>
@@ -317,7 +344,14 @@ function AnaliticaDenuncias() {
               />
             </section>
 
-            <section className="grid grid-cols-1 lg-grid-cols-2 gap-6">
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <BarList
+                title="Motivos más frecuentes"
+                items={stats.topMotivos || []}
+                labelKey="motivo"
+                emptyLabel="Aún no hay motivos clasificados."
+                darkMode={darkMode}
+              />
               <BarList
                 title="Tipos de denuncia (checkbox)"
                 items={stats.tiposFrecuentes || []}

@@ -44,6 +44,8 @@ export const crearDenuncia = async (req, res) => {
       testigoNombre,
       testigoCargoRelacion,
       testigoContacto,
+      regionHechos,
+      comunaHechos,
       declaraVeracidad,
       autorizaDatosPersonales,
     } = req.body;
@@ -74,6 +76,8 @@ export const crearDenuncia = async (req, res) => {
       testigoNombre: testigoNombre || "",
       testigoCargoRelacion: testigoCargoRelacion || "",
       testigoContacto: testigoContacto || "",
+      regionHechos: regionHechos || "",
+      comunaHechos: comunaHechos || "",
       declaraVeracidad: String(declaraVeracidad) === 'true' || declaraVeracidad === true,
       autorizaDatosPersonales: String(autorizaDatosPersonales) === 'true' || autorizaDatosPersonales === true,
     };
@@ -115,7 +119,18 @@ export const crearDenuncia = async (req, res) => {
 
 export const listarDenuncias = async (req, res) => {
   try {
-    const { empresaRut, estado, q, startDate, endDate, page = 1, limit = 20, sort = '-createdAt' } = req.query;
+    const {
+      empresaRut,
+      estado,
+      q,
+      startDate,
+      endDate,
+      regionHechos,
+      comunaHechos,
+      page = 1,
+      limit = 20,
+      sort = '-createdAt'
+    } = req.query;
     const filtro = {};
     if (empresaRut) filtro.empresaRut = empresaRut;
     if (estado) filtro.estado = estado;
@@ -124,6 +139,8 @@ export const listarDenuncias = async (req, res) => {
       if (startDate) filtro.createdAt.$gte = new Date(startDate);
       if (endDate) filtro.createdAt.$lte = new Date(endDate);
     }
+    if (regionHechos) filtro.regionHechos = regionHechos;
+    if (comunaHechos) filtro.comunaHechos = comunaHechos;
     if (q) {
       const rx = new RegExp(q, 'i');
       filtro.$or = [
@@ -200,13 +217,15 @@ export const actualizarEstadoDenuncia = async (req, res) => {
 
 export const estadisticasDenuncias = async (req, res) => {
   try {
-    const { desde, hasta } = req.query;
+    const { desde, hasta, region, comuna } = req.query;
     const filtro = {};
     if (desde || hasta) {
       filtro.createdAt = {};
       if (desde) filtro.createdAt.$gte = new Date(desde);
       if (hasta) filtro.createdAt.$lte = new Date(hasta);
     }
+    if (region) filtro.regionHechos = region;
+    if (comuna) filtro.comunaHechos = comuna;
     const denuncias = await Denuncia.find(filtro).lean();
     const total = denuncias.length;
     const uniqueRuts = [...new Set(denuncias.map(d => d.trabajadorRut).filter(Boolean))];
@@ -227,6 +246,7 @@ export const estadisticasDenuncias = async (req, res) => {
     const victimaMap = new Map(victimas.map((v) => [v._id.toString(), v]));
 
     const porRegion = {};
+    const porComuna = {};
     const sexoAgresores = {};
     const sexoVictimas = {};
     const rangosEdadAgresores = {};
@@ -239,8 +259,11 @@ export const estadisticasDenuncias = async (req, res) => {
 
     for (const denuncia of denuncias) {
       const agresor = denuncia.trabajadorRut ? agresorMap.get(denuncia.trabajadorRut) : null;
-      const region = agresor?.region || "Sin datos";
+      const regionHechosKey = (denuncia.regionHechos || "").trim();
+      const region = regionHechosKey || agresor?.region || "Sin datos";
       porRegion[region] = (porRegion[region] || 0) + 1;
+      const comunaKey = (denuncia.comunaHechos || "").trim() || "Sin datos";
+      porComuna[comunaKey] = (porComuna[comunaKey] || 0) + 1;
 
       const sexoAgresor = agresor?.sexo || "Sin datos";
       sexoAgresores[sexoAgresor] = (sexoAgresores[sexoAgresor] || 0) + 1;
@@ -283,8 +306,9 @@ export const estadisticasDenuncias = async (req, res) => {
 
     res.json({
       total,
-      filtros: { desde: desde || null, hasta: hasta || null },
+      filtros: { desde: desde || null, hasta: hasta || null, region: region || null, comuna: comuna || null },
       porRegion: toSortedArray(porRegion, "region"),
+      porComuna: toSortedArray(porComuna, "comuna"),
       sexoAgresores: toSortedArray(sexoAgresores, "sexo"),
       sexoVictimas: toSortedArray(sexoVictimas, "sexo"),
       edadesAgresores: {

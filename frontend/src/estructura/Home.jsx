@@ -7,10 +7,12 @@ import fondo4 from "../Imagenes/fondo4.png";
 
 const Home = () => {
   const { user } = useContext(UserContext);
+  // Prepara los fondos del carrusel principal (se filtran nulos por seguridad)
   const fondos = useMemo(() => [fondo1, fondo2, fondo3, fondo4].filter(Boolean), []);
   const [fondoActual, setFondoActual] = useState(0);
 
   useEffect(() => {
+    // Avanza el fondo cada 8 segundos para mantener la portada dinámica
     if (fondos.length <= 1) return;
     const interval = setInterval(() => {
       setFondoActual((prev) => (prev + 1) % fondos.length);
@@ -44,11 +46,13 @@ const Home = () => {
               Bienvenido a <span className="text-[#FF7A3D] drop-shadow">Mi DT</span>
             </h1>
             {user ? (
+              // Mensaje personalizado cuando el usuario tiene sesión iniciada
               <p className="text-base md:text-lg text-white/90">
                 Hola <span className="font-semibold">{user.nombre}</span>, revisa tu panel para
                 gestionar organigramas, seguir denuncias y acompanhar a tus colaboradores.
               </p>
             ) : (
+              // Texto genérico para visitantes no autenticados
               <p className="text-base md:text-lg text-white/90">
                 Inicia sesion o registrate para construir tu organigrama, monitorear denuncias y
                 centralizar la informacion clave del equipo.

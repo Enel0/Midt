@@ -34,6 +34,8 @@ const DenunciaSchema = new Schema(
     testigoNombre: { type: String, default: "" },
     testigoCargoRelacion: { type: String, default: "" },
     testigoContacto: { type: String, default: "" },
+    regionHechos: { type: String, default: "" },
+    comunaHechos: { type: String, default: "" },
     declaraVeracidad: { type: Boolean, default: false },
     autorizaDatosPersonales: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: "Usuario", default: null },

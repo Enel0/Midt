@@ -1,6 +1,5 @@
 ﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useContext } from "react";
-import { CartProvider } from "./context/CartContext";
 import { UserProvider, UserContext } from "./context/UserContext";
 import Navbar from "./components/Navbar";
 import Home from "./estructura/Home";
@@ -50,11 +49,9 @@ const AppLayout = () => {
 function App() {
   return (
     <UserProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <AppLayout />
-        </BrowserRouter>
-      </CartProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
     </UserProvider>
   );
 }
