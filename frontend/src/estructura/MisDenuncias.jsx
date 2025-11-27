@@ -1,5 +1,6 @@
 ﻿import React, { useContext, useEffect, useMemo, useState } from "react";
 import { UserContext } from "../context/UserContext";
+import { buildApiUrl } from "../utils/api";
 
 const MisDenuncias = () => {
   const { darkMode } = useContext(UserContext);
@@ -15,7 +16,7 @@ const MisDenuncias = () => {
     setLoading(true);
     setError("");
     try {
-      const url = new URL("http://localhost:5000/api/denuncias/mias/list");
+      const url = new URL(buildApiUrl("/api/denuncias/mias/list"));
       if (estado) url.searchParams.set("estado", estado);
       url.searchParams.set("page", String(page));
       url.searchParams.set("limit", String(limit));

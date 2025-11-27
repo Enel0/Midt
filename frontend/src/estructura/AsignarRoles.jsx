@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { formatearRut, validarRutFormato, validarRutDV } from "../utils/cl-regiones-comunas";
 import { UserContext } from "../context/UserContext";
+import { buildApiUrl } from "../utils/api";
 
 function AsignarRoles() {
   const { darkMode } = useContext(UserContext);
@@ -12,7 +13,7 @@ function AsignarRoles() {
 
   // Cargar lista de usuarios
   useEffect(() => {
-    fetch("http://localhost:5000/api/usuarios")
+    fetch(buildApiUrl("/api/usuarios"))
       .then((res) => res.json())
       .then((data) => {
         setUsuarios(data);
@@ -25,7 +26,7 @@ function AsignarRoles() {
   }, []);
 
   const actualizarRol = (id, nuevoRol, empresaAsignada = null) => {
-    fetch(`http://localhost:5000/api/actualizar-rol/${id}`, {
+    fetch(buildApiUrl(`/api/actualizar-rol/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ rol: nuevoRol, empresaAdministra: empresaAsignada }),

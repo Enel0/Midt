@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
-const API_BASE_URL = (import.meta.env?.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+import { API_BASE_URL, buildApiUrl } from '../utils/api';
 
 const formatBytes = (bytes) => {
   if (!Number.isFinite(bytes)) return null;
@@ -46,7 +45,7 @@ const Denuncias = () => {
   const fetchItems = async () => {
     setLoading(true); setError('');
     try {
-      const url = new URL('http://localhost:5000/api/denuncias');
+      const url = new URL(buildApiUrl('/api/denuncias'));
       if (empresaRut) url.searchParams.set('empresaRut', empresaRut);
       if (q) url.searchParams.set('q', q);
       if (estado) url.searchParams.set('estado', estado);
@@ -70,7 +69,7 @@ const Denuncias = () => {
 
   const actualizarEstadoDenuncia = async (id, estado) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/denuncias/${id}/estado`, {
+      const res = await fetch(buildApiUrl(`/api/denuncias/${id}/estado`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado })
@@ -90,7 +89,13 @@ const Denuncias = () => {
     const ok = window.confirm(`Actualizar estado a "${nuevo}" de ${bulkSelectedIds.length} denuncias?`);
     if (!ok) return;
     for (const id of bulkSelectedIds) {
-      try { await fetch(`http://localhost:5000/api/denuncias/${id}/estado`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: nuevo }) }); } catch {}
+      try {
+        await fetch(buildApiUrl(`/api/denuncias/${id}/estado`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: nuevo })
+        });
+      } catch {}
     }
     setSelected({});
     fetchItems();
@@ -98,7 +103,7 @@ const Denuncias = () => {
 
   const verDetalle = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/denuncias/${id}`);
+      const res = await fetch(buildApiUrl(`/api/denuncias/${id}`));
       if (!res.ok) throw new Error('No se pudo obtener la denuncia');
       const data = await res.json();
       setDetail(data);

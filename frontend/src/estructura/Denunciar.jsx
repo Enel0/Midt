@@ -5,6 +5,7 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
+import { buildApiUrl } from '../utils/api';
 
 // Hook auxiliar para leer parámetros de consulta (?empresaRut=...)
 function useQuery() {
@@ -88,7 +89,7 @@ const Denunciar = () => {
       const headers = {};
       // Adjuntar token si existe (autenticación)
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch('http://localhost:5000/api/denuncias', {
+      const res = await fetch(buildApiUrl('/api/denuncias'), {
         method: 'POST',
         headers,
         body: form

@@ -32,6 +32,12 @@ router.post("/", async (req, res) => {
         email: usuario.email,
         rol: usuario.rol,
         rut: usuario.rut,
+        fechaNacimiento: usuario.fechaNacimiento,
+        direccion: usuario.direccion,
+        region: usuario.region,
+        comuna: usuario.comuna,
+        sexo: usuario.sexo,
+        telefono: usuario.telefono,
         empresaAdministra: usuario.empresaAdministra || null,
       },
     });

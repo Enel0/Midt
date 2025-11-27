@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Tree from 'react-d3-tree';
 import { UserContext } from '../context/UserContext';
 import { validarRutFormato, validarRutDV, formatearRut } from '../utils/cl-regiones-comunas';
+import { buildApiUrl } from '../utils/api';
 
 const normalizeRut = (r) => (r || '').toUpperCase().replace(/[.\-]/g, '');
 
 const palette = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 const getColorByDepth = (depth) => palette[depth % palette.length];
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+const API_BASE = buildApiUrl();
 
 const stopNativePropagation = (evt) => {
   if (!evt) return;

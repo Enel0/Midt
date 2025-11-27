@@ -1,6 +1,7 @@
 ﻿import React, { useContext, useEffect, useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import { UserContext } from "../context/UserContext";
+import { buildApiUrl } from "../utils/api";
 
 const regionesChile = [
   "Arica y Parinacota",
@@ -84,9 +85,9 @@ function AnaliticaDenuncias() {
       if (filtros.desde) params.set("desde", filtros.desde);
       if (filtros.hasta) params.set("hasta", filtros.hasta);
       if (filtros.region) params.set("region", filtros.region);
-      const url = params.toString()
-        ? `http://localhost:5000/api/denuncias/estadisticas/general?${params.toString()}`
-        : "http://localhost:5000/api/denuncias/estadisticas/general";
+      const endpoint = "/api/denuncias/estadisticas/general";
+      const query = params.toString();
+      const url = buildApiUrl(query ? `${endpoint}?${query}` : endpoint);
       const res = await fetch(url);
       if (!res.ok) throw new Error("No se pudieron cargar las estadísticas");
       const data = await res.json();

@@ -7,8 +7,9 @@ import fondo1 from "../Imagenes/fondo1.jpg";
 import fondo2 from "../Imagenes/fondo2.jpg";
 import fondo3 from "../Imagenes/fondo3.png";
 import fondo4 from "../Imagenes/fondo4.png";
+import { buildApiUrl } from "../utils/api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+const API_BASE = buildApiUrl();
 
 function RegistroForm() {
   const navigate = useNavigate();

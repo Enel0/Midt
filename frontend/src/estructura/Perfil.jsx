@@ -1,8 +1,9 @@
 ﻿import React, { useContext, useState } from "react";
 import { UserContext } from "../context/UserContext";
 import { formatearRut } from "../utils/cl-regiones-comunas";
+import { buildApiUrl } from "../utils/api";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+const API_BASE = buildApiUrl();
 
 const Perfil = () => {
   const { user, darkMode } = useContext(UserContext);
