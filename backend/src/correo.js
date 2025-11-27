@@ -15,28 +15,36 @@ router.post("/enviar-codigo", async (req, res) => {
   const codigo = Math.floor(100000 + Math.random() * 900000).toString();
   codigoVerificacionGuardado = codigo;
 
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+
+  if (!emailUser || !emailPass) {
+    console.error("Faltan las variables de entorno EMAIL_USER o EMAIL_PASS");
+    return res.status(500).json({ message: "Configuracion de correo incompleta" });
+  }
+
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "mati.xoda@gmail.com",
-      pass: "tsui uerd sshm qgtb", // Usa contraseña de aplicación
+      user: emailUser,
+      pass: emailPass, // Usa contrasena de aplicacion
     },
   });
 
   const mailOptions = {
-    from: "Mi DT  <MiDTverificador@gmail.com>",
+    from: emailUser,
     to: email,
-    subject: "Tu código de verificación",
-    text: `Tu código de verificación es: ${codigo}`,
+    subject: "Tu codigo de verificacion",
+    text: `Tu codigo de verificacion es: ${codigo}`,
   };
 
   try {
     await transporter.sendMail(mailOptions);
-    res.json({ message: "Código enviado con éxito", codigo });
+    res.json({ message: "Codigo enviado con exito", codigo });
   } catch (error) {
     console.error("Error al enviar el correo:", error);
     res.status(500).json({ message: "Error al enviar el correo" });
   }
 });
 
-export default router; // ✅ Exportación en formato ES Module
+export default router; // e.g. Exportacion en formato ES Module
