@@ -241,7 +241,9 @@ function AnaliticaDenuncias() {
               <select
                 id="comuna"
                 className={`border rounded px-3 py-2 ${
-                  darkMode ? "bg-white/10 border-white/20 text-white" : "bg-white border-gray-300"
+                  darkMode
+                    ? "bg-white/10 border-white/20 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    : "bg-white border-gray-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 }`}
                 value={filtros.comuna}
                 onChange={(e) => setFiltros((prev) => ({ ...prev, comuna: e.target.value }))}

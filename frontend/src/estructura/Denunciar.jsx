@@ -120,8 +120,8 @@ const Denunciar = () => {
     : "max-w-2xl mx-auto bg-white border border-gray-200 rounded-2xl shadow p-6";
   const labelClasses = darkMode ? "font-semibold text-sm text-white/90" : "font-semibold text-sm text-gray-700";
   const inputClasses = darkMode
-    ? "w-full border border-white/20 bg-white/5 text-white placeholder-white/60 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
-    : "w-full border border-gray-300 bg-white text-gray-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF540C]";
+    ? "w-full border border-white/20 bg-white/5 text-white placeholder-white/60 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF540C] disabled:opacity-40 disabled:cursor-not-allowed disabled:border-white/10"
+    : "w-full border border-gray-300 bg-white text-gray-800 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF540C] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed";
   const textAreaClasses = darkMode
     ? "w-full border border-white/20 bg-white/5 text-white placeholder-white/60 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
     : "w-full border border-gray-300 bg-white text-gray-800 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#FF540C]";

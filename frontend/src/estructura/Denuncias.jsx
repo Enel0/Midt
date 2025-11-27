@@ -125,8 +125,8 @@ const Denuncias = () => {
     ? "min-h-screen bg-[#050b1b] text-white p-6 transition-colors"
     : "min-h-screen bg-gray-50 text-[#0D0A4F] p-6 transition-colors";
   const inputClasses = darkMode
-    ? "p-2 border border-white/20 rounded bg-white/5 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-[#FF540C]"
-    : "p-2 border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FF540C]";
+    ? "p-2 border border-white/20 rounded bg-white/5 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-[#FF540C] disabled:opacity-40 disabled:cursor-not-allowed disabled:border-white/10"
+    : "p-2 border border-gray-300 rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FF540C] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed";
   const panelClasses = darkMode
     ? "bg-[#0f162f]/95 border border-white/10 rounded-2xl shadow-2xl shadow-black/40 p-4"
     : "bg-white border border-gray-200 rounded-2xl shadow p-4";
