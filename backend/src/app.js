@@ -13,6 +13,7 @@ import solicitudesRoutes from "./routes/solicitudes.js";
 
 const app = express();
 const __dirname = path.resolve();
+const FRONTEND_URL = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
 
 
 
@@ -40,6 +41,9 @@ app.use("/api", correoRoutes); // esto permite POST /api/enviar-codigo
 
 // Manejo de rutas no encontradas
 app.use((req, res) => {
+  if (FRONTEND_URL && !req.path.startsWith("/api") && req.method === "GET") {
+    return res.redirect(301, `${FRONTEND_URL}${req.originalUrl}`);
+  }
   res.status(404).json({ message: "Ruta no encontrada" });
 });
 
@@ -50,4 +54,3 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
-

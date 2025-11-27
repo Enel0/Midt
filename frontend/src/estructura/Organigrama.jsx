@@ -8,6 +8,7 @@ const normalizeRut = (r) => (r || '').toUpperCase().replace(/[.\-]/g, '');
 
 const palette = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 const getColorByDepth = (depth) => palette[depth % palette.length];
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 
 const stopNativePropagation = (evt) => {
   if (!evt) return;
@@ -174,7 +175,7 @@ const Organigrama = () => {
       try {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers });
+        const resMis = await fetch(`${API_BASE}/api/organigramas/mis-empresas`, { headers });
         if (resMis.status === 401) {
           alert('Tu sesion expiro o es invalida. Inicia sesion nuevamente.');
           localStorage.removeItem('token');
@@ -220,7 +221,7 @@ const Organigrama = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:5000/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
+        const res = await fetch(`${API_BASE}/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
         if (!res.ok) throw new Error('No se pudo cargar el organigrama');
         const data = await res.json();
         const normalized = Array.isArray(data)
@@ -370,13 +371,13 @@ const Organigrama = () => {
       return;
     }
     try {
-      await fetch(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(draggingId)}`, {
+      await fetch(`${API_BASE}/api/organigramas/nodos/${encodeURIComponent(draggingId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parent: targetNode.id }),
       });
       // recargar árbol
-      const res = await fetch(`http://localhost:5000/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
+      const res = await fetch(`${API_BASE}/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
       if (res.ok) {
         const data = await res.json();
         const normalized = Array.isArray(data) ? (data.length === 1 ? data[0] : { name: empresaRut, children: data }) : data;
@@ -459,7 +460,7 @@ const Organigrama = () => {
   const refreshTree = async () => {
     if (!empresaRut) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
+      const res = await fetch(`${API_BASE}/api/organigramas/${encodeURIComponent(empresaRut)}/tree`);
       if (res.ok) {
         const data = await res.json();
         const normalized = Array.isArray(data) ? (data.length === 1 ? data[0] : { name: empresaRut, children: data }) : data;
@@ -470,7 +471,7 @@ const Organigrama = () => {
 
   const patchNodeParent = useCallback(async (nodeId, parentId) => {
     if (!nodeId) throw new Error('Nodo inválido');
-    const res = await fetch(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(nodeId)}`, {
+    const res = await fetch(`${API_BASE}/api/organigramas/nodos/${encodeURIComponent(nodeId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ parent: parentId ?? null }),
@@ -569,7 +570,7 @@ const Organigrama = () => {
         parent: parentMap[selectedNode.id] || null,
       };
       if (divisionNombre.trim()) payload.nombreTrabajador = divisionNombre.trim();
-      const res = await fetch('http://localhost:5000/api/organigramas/nodos', {
+      const res = await fetch(`${API_BASE}/api/organigramas/nodos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -606,7 +607,7 @@ const Organigrama = () => {
     try {
       const body = { empresaRut, trabajadorRut: newRut, cargo: newCargo };
       if (selectedNode?.id) body.parent = selectedNode.id;
-      const res = await fetch('http://localhost:5000/api/organigramas/nodos', {
+      const res = await fetch(`${API_BASE}/api/organigramas/nodos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -636,7 +637,7 @@ const Organigrama = () => {
     const ok = window.confirm(cascade ? '¿Eliminar este nodo y todos sus descendientes?' : '¿Eliminar este nodo? (debe estar sin hijos)');
     if (!ok) return;
     try {
-      const url = new URL(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(selectedNode.id)}`);
+      const url = new URL(`${API_BASE}/api/organigramas/nodos/${encodeURIComponent(selectedNode.id)}`);
       if (cascade) url.searchParams.set('cascade', 'true');
       const res = await fetch(url, { method: 'DELETE' });
       if (!res.ok) throw new Error('No se pudo eliminar el nodo');
@@ -650,7 +651,7 @@ const Organigrama = () => {
   const makeSelectedRoot = async () => {
     if (!selectedNode?.id) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/organigramas/nodos/${encodeURIComponent(selectedNode.id)}`, {
+      const res = await fetch(`${API_BASE}/api/organigramas/nodos/${encodeURIComponent(selectedNode.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parent: null })
@@ -761,7 +762,7 @@ const Organigrama = () => {
                       const token = localStorage.getItem('token');
                       const headers = { 'Content-Type': 'application/json' };
                       if (token) headers['Authorization'] = `Bearer ${token}`;
-                      const resp = await fetch('http://localhost:5000/api/organigramas/solicitudes', {
+                      const resp = await fetch(`${API_BASE}/api/organigramas/solicitudes`, {
                         method: 'POST', headers, body: JSON.stringify({ empresaRut: newEmpresa, cargoPropuesto: newCargo })
                       });
                       if (resp.status === 401) {
@@ -777,7 +778,7 @@ const Organigrama = () => {
                       if (data.autoAprobada) {
                         const token2 = localStorage.getItem('token');
                         const headers2 = token2 ? { Authorization: `Bearer ${token2}` } : {};
-                        const resMis = await fetch('http://localhost:5000/api/organigramas/mis-empresas', { headers: headers2 });
+                        const resMis = await fetch(`${API_BASE}/api/organigramas/mis-empresas`, { headers: headers2 });
                         if (resMis.status === 401) {
                           alert('Tu sesion expiro o es invalida. Inicia sesion nuevamente.');
                           localStorage.removeItem('token');
