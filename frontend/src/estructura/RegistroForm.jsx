@@ -8,6 +8,8 @@ import fondo2 from "../Imagenes/fondo2.jpg";
 import fondo3 from "../Imagenes/fondo3.png";
 import fondo4 from "../Imagenes/fondo4.png";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+
 function RegistroForm() {
   const navigate = useNavigate();
   const {
@@ -49,7 +51,7 @@ function RegistroForm() {
       return;
     }
 
-    fetch("http://localhost:5000/api/enviar-codigo", {
+    fetch(`${API_BASE}/api/enviar-codigo`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -85,7 +87,7 @@ function RegistroForm() {
       password: data.password,
     };
 
-    fetch("http://localhost:5000/api/auth/registro", {
+    fetch(`${API_BASE}/api/auth/registro`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(jsonData),

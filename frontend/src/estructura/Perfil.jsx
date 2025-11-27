@@ -2,6 +2,8 @@
 import { UserContext } from "../context/UserContext";
 import { formatearRut } from "../utils/cl-regiones-comunas";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+
 const Perfil = () => {
   const { user, darkMode } = useContext(UserContext);
 
@@ -22,7 +24,7 @@ const Perfil = () => {
     }
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/enviar-codigo", {
+      const res = await fetch(`${API_BASE}/api/enviar-codigo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -56,7 +58,7 @@ const Perfil = () => {
     }
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/auth/login/reset-password", {
+      const res = await fetch(`${API_BASE}/api/auth/login/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, nuevaPassword: newPassword }),

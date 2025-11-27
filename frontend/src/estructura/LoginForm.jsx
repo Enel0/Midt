@@ -8,6 +8,8 @@ import fondo2 from "../Imagenes/fondo2.jpg";
 import fondo3 from "../Imagenes/fondo3.png";
 import fondo4 from "../Imagenes/fondo4.png";
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+
 function LoginForm() {
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm();
   const { login } = useContext(UserContext);
@@ -27,7 +29,7 @@ function LoginForm() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -56,7 +58,7 @@ function LoginForm() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/enviar-codigo", {
+      const res = await fetch(`${API_BASE}/api/enviar-codigo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -92,7 +94,7 @@ function LoginForm() {
     try {
       if (!data.newPassword) throw new Error("Ingresa una nueva contraseña");
 
-      const res = await fetch("http://localhost:5000/api/auth/login/reset-password", {
+      const res = await fetch(`${API_BASE}/api/auth/login/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
