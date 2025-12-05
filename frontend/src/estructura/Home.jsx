@@ -48,8 +48,8 @@ const Home = () => {
             {user ? (
               // Mensaje personalizado cuando el usuario tiene sesión iniciada
               <p className="text-base md:text-lg text-white/90">
-                Hola <span className="font-semibold">{user.nombre}</span>, revisa tu panel para
-                gestionar organigramas, seguir denuncias y acompanhar a tus colaboradores.
+                Hola <span className="font-semibold">{user.nombre}</span>, ingresa a tu panel para
+                gestionar organigramas, seguir denuncias y acompañar a tus colaboradores.
               </p>
             ) : (
               // Texto genérico para visitantes no autenticados
